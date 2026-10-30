@@ -1,0 +1,123 @@
+# NEXUS — Docker Agent team definition (MVP research team)
+#
+# Canonical behaviour for each agent lives in agents/prompts/<name>.md — keep in sync.
+# Field names follow the Docker Agent config reference (agents / models / toolsets / sub_agents).
+# VALIDATE against the installed Docker Agent version before relying on any field:
+#   https://docs.docker.com/ai/docker-agent/reference/config/
+#
+# Voice agents (51-56) are NOT in this team: they run inside services/voice-gateway for latency.
+# The Scientific Integrity Engine is code (packages/sie), not an agent.
+
+models:
+  muse:
+    provider: TODO_MUSE_PROVIDER      # confirm Muse provider integration in Phase 1
+    model: TODO_MUSE_MODEL_ID
+  fast:
+    provider: TODO_FAST_PROVIDER      # small model for extraction-style tasks
+    model: TODO_FAST_MODEL_ID
+
+agents:
+  root:
+    # Catalog #1 — Observation Coordinator
+    model: muse
+    description: Routes a lunar observation to specialist agents and merges their structured outputs. Never makes scientific claims itself.
+    instruction: |
+      You coordinate a NEXUS investigation. Follow agents/prompts/observation_coordinator.md.
+      Input: one Observation (+ optional FieldNote) and the Jev routing decision.
+      1. Dispatch lola_elevation_researcher and lroc_imagery_researcher first (independent).
+      2. Then dispatch lunar_geology_researcher, hypothesis_generator and alternative_explanation_researcher with step-1 outputs.
+      3. Then uncertainty_analyst, then research_synthesis_specialist.
+      Return ONLY a JSON array of every AgentOutput you received. Do not edit their claims.
+    sub_agents:
+      - lola_elevation_researcher
+      - lroc_imagery_researcher
+      - lunar_geology_researcher
+      - hypothesis_generator
+      - alternative_explanation_researcher
+      - uncertainty_analyst
+      - research_synthesis_specialist
+    toolsets:
+      - type: think
+      - type: todo
+
+  lola_elevation_researcher:
+    # Catalog #26 — explains measurements computed by packages/terrain; never computes numbers itself
+    model: fast
+    description: Explains terrain measurements (depth, width, slope) for the observed feature using LOLA-derived records.
+    instruction: |
+      Follow agents/prompts/lola_elevation_researcher.md. Use terrain_measurements to get MeasurementRecords.
+      Every number you write must come from a MeasurementRecord and cite its id in measurementIds.
+      Return ONLY JSON matching AgentOutput.
+    toolsets:
+      - type: mcp
+        command: node
+        args: ["services/orchestrator/dist/mcp/nexusTools.js"]
+        tools: [terrain_measurements, evidence_lookup]
+
+  lroc_imagery_researcher:
+    # Catalog #25
+    model: muse
+    description: Describes what LROC imagery evidence items show for the observed feature.
+    instruction: |
+      Follow agents/prompts/lroc_imagery_researcher.md. Only describe what is visible; claimType "observation".
+      Cite evidence IDs from evidence_lookup. Return ONLY JSON matching AgentOutput.
+    toolsets:
+      - type: mcp
+        command: node
+        args: ["services/orchestrator/dist/mcp/nexusTools.js"]
+        tools: [evidence_lookup, evidence_image]
+
+  lunar_geology_researcher:
+    # Catalog #11
+    model: muse
+    description: Proposes geological interpretations grounded in the site's curated literature excerpts.
+    instruction: |
+      Follow agents/prompts/lunar_geology_researcher.md. Use only text evidence from evidence_lookup.
+      claimType "interpretation". Return ONLY JSON matching AgentOutput.
+    toolsets:
+      - type: mcp
+        command: node
+        args: ["services/orchestrator/dist/mcp/nexusTools.js"]
+        tools: [evidence_lookup]
+
+  hypothesis_generator:
+    # Catalog #33
+    model: muse
+    description: Produces 2-3 competing hypotheses, each with supporting evidence IDs.
+    instruction: |
+      Follow agents/prompts/hypothesis_generator.md. claimType "hypothesis". Return ONLY JSON matching AgentOutput.
+    toolsets:
+      - type: mcp
+        command: node
+        args: ["services/orchestrator/dist/mcp/nexusTools.js"]
+        tools: [evidence_lookup]
+      - type: think
+
+  alternative_explanation_researcher:
+    # Catalog #34 — the Skeptic
+    model: muse
+    description: Finds alternative explanations and evidence that contradicts the leading hypotheses.
+    instruction: |
+      Follow agents/prompts/alternative_explanation_researcher.md. Fill contradictingEvidenceIds.
+      Return ONLY JSON matching AgentOutput.
+    toolsets:
+      - type: mcp
+        command: node
+        args: ["services/orchestrator/dist/mcp/nexusTools.js"]
+        tools: [evidence_lookup]
+      - type: think
+
+  uncertainty_analyst:
+    # Catalog #37
+    model: fast
+    description: Assigns an uncertainty level and plain explanation to the investigation.
+    instruction: |
+      Follow agents/prompts/uncertainty_analyst.md. Return ONLY JSON matching AgentOutput with the uncertainty field set.
+
+  research_synthesis_specialist:
+    # Catalog #22
+    model: muse
+    description: Drafts the ScientificFinding and the spoken briefing script from validated agent outputs.
+    instruction: |
+      Follow agents/prompts/research_synthesis_specialist.md. Do not add claims that no agent made.
+      Return ONLY JSON: { "findingDraft": ..., "spokenBriefingDraft": ... }.

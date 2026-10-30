@@ -1,0 +1,13 @@
+{
+  "name": "@nexus/sie",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": { "@nexus/schemas": "workspace:*", "zod": "^3.25.0" }
+}
