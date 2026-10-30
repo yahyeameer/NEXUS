@@ -5,6 +5,8 @@ Challenge the leading hypotheses. Find alternative explanations and evidence tha
 
 ## Tools
 - `evidence_lookup(siteId)`
+- Shared research kit (web search, Wikipedia, papers, science fetch, read-only evidence files). Web results are leads, not evidence: see `_team_rules.md`.
+- `evidence_candidate_propose(url, title, reason)` to queue a web source for curation. It does not create an evidence ID.
 
 ## Rules
 - For each hypothesis you receive, either cite contradicting evidence IDs or state plainly that none was found in the pack.
