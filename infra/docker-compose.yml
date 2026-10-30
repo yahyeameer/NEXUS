@@ -1,0 +1,88 @@
+# Local stack (ARCHITECTURE.md "Services"): Postgres+PostGIS, object storage, api, voice-gateway, orchestrator.
+#   docker compose -f infra/docker-compose.yml up -d
+# Provider keys are read from ../.env and stay on the backend (AGENTS.md rule 6).
+name: nexus
+
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_USER: nexus
+      POSTGRES_PASSWORD: nexus
+      POSTGRES_DB: nexus
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nexus -d nexus"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  object-storage:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: nexus
+      MINIO_ROOT_PASSWORD: nexus-dev-only
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - objects:/data
+
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      args:
+        SERVICE: api
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      DATABASE_URL: postgres://nexus:nexus@postgres:5432/nexus
+      OBJECT_STORAGE_URL: http://object-storage:9000
+    ports:
+      - "4000:4000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  voice-gateway:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      args:
+        SERVICE: voice-gateway
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      API_URL: http://api:4000
+      OBJECT_STORAGE_URL: http://object-storage:9000
+    ports:
+      - "4100:4100"
+    depends_on:
+      - api
+
+  orchestrator:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.service
+      args:
+        SERVICE: orchestrator
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      API_URL: http://api:4000
+    ports:
+      - "4200:4200"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  objects:

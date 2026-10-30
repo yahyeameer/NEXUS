@@ -1,0 +1,11 @@
+# Dev image for one backend service. Build from the repo root:
+#   docker build -f infra/Dockerfile.service --build-arg SERVICE=api .
+FROM node:22-slim
+ARG SERVICE
+ENV SERVICE=${SERVICE}
+RUN corepack enable
+WORKDIR /repo
+COPY . .
+RUN pnpm install --frozen-lockfile
+WORKDIR /repo/services/${SERVICE}
+CMD ["pnpm", "start"]

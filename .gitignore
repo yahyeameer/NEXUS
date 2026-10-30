@@ -1,0 +1,14 @@
+node_modules/
+dist/
+coverage/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+test-results/
+playwright-report/
+# Raw audio is never committed (AGENTS.md §10)
+*.wav
+*.opus
+*.webm
