@@ -1,7 +1,7 @@
 // The headset app: one tabletop site at a time, a main panel (selection → research → finding card → review),
 // a captions strip and a wrist menu. Every action is reachable by poke or ray + pinch; voice only shortcuts them
 // (AGENTS.md rule 1, INTERACTION.md §1 parity table).
-import type { NexusEvent, ReviewDecision, ScientificFinding, VoiceServerMessage } from "@nexus/schemas";
+import type { EvidenceItem, MeasurementRecord, NexusEvent, ReviewDecision, ScientificFinding, TerrainFeature, VoiceServerMessage } from "@nexus/schemas";
 import type { Command } from "@nexus/voice";
 import { Vector3 } from "three";
 import { PushToTalkMic } from "./audio/mic.js";
@@ -12,7 +12,10 @@ import { HandInput } from "./input/hands.js";
 import { ApiClient } from "./net/api.js";
 import type { LogbookEntry } from "./net/api.js";
 import { VoiceClient } from "./net/voice.js";
+import { zoomedScale } from "./input/manipulate.js";
+import { Diorama } from "./scene/diorama.js";
 import { pickFeature } from "./scene/featurePick.js";
+import { AgentOrbs } from "./scene/orbs.js";
 import { sceneToTile } from "./scene/tabletop.js";
 import { loadSite, RING_COLORS } from "./scene/terrain.js";
 import type { LoadedSite } from "./scene/terrain.js";
@@ -22,7 +25,7 @@ import type { RingState } from "./ui/findingView.js";
 import type { ButtonSpec, PanelContent, PanelLine } from "./ui/panel.js";
 import { Panel } from "./ui/panel.js";
 
-type Screen = "pair" | "welcome" | "idle" | "selected" | "researching" | "finding" | "reason" | "sources" | "logbook" | "clarify";
+type Screen = "pair" | "welcome" | "idle" | "selected" | "researching" | "finding" | "reason" | "sources" | "evidence" | "logbook" | "clarify";
 
 export interface AppOptions {
   emulated: boolean;
@@ -42,6 +45,10 @@ export interface AppState {
   findings: Record<string, { id: string; status: string }>;
   captions: string[];
   lastCommand?: string;
+  view: { yaw: number; scale: number };
+  descriptors: string[];
+  evidenceOpen?: string;
+  orbs: number;
 }
 
 /** Ray hits within this many tile metres of a feature footprint select it. */
@@ -49,10 +56,22 @@ const PICK_TOLERANCE_M = 120;
 const POINTER_INTERVAL_MS = 33;
 const USER_ID = "scientist";
 
+/** Hands-only descriptor chips per feature kind (INTERACTION.md "Record observation"). Plain observational words. */
+const DESCRIPTOR_CHIPS: Record<TerrainFeature["kind"], string[]> = {
+  rille: ["Sinuous", "Steep walls", "Boulders on walls", "Flat floor"],
+  crater: ["Raised rim", "Boulders on rim", "Smooth floor", "Subdued rim"],
+  slope: ["Boulders", "Smooth surface", "Layering", "Tracks or trails"],
+  point: ["Boulder", "Bright patch", "Dark patch", "Small crater"],
+};
+
 export class NexusApp {
   readonly main = new Panel("main", 0.4, 0.42);
   readonly captions = new Panel("captions", 0.4, 0.07);
-  readonly wrist = new Panel("wrist", 0.18, 0.21);
+  readonly wrist = new Panel("wrist", 0.18, 0.31);
+  /** Evidence window, opened from a finding card (INTERACTION.md "Open evidence: poke evidence chip"). */
+  readonly evidence = new Panel("evidence", 0.34, 0.4);
+  readonly diorama = new Diorama();
+  private readonly orbs = new AgentOrbs();
   readonly api = new ApiClient();
   readonly input: HandInput;
   private readonly voice: VoiceClient;
@@ -73,6 +92,12 @@ export class NexusApp {
   private readonly captionLog: string[] = [];
   private ptt?: { startedAt: number; lastSample: number; samples: { tMs: number; rayFeatureId?: string; rayPoint?: { x: number; y: number; z: number }; onUi: boolean; headPosition: { x: number; y: number; z: number }; headDirection: { x: number; y: number; z: number } }[]; micOpen: boolean };
   private lastCommand?: string;
+  /** Descriptor chips poked on the selection screen; recorded with the observation as the scientist's words. */
+  private descriptors = new Set<string>();
+  private evidenceData?: { siteId: string; items: EvidenceItem[]; measurements: MeasurementRecord[] };
+  private evidenceOpen?: string;
+  private readonly media = new Map<string, HTMLImageElement>();
+  private wristFacingSet = false;
   private readonly wristPose = { position: new Vector3(), palmNormal: new Vector3() };
   private readonly head = new Vector3();
   private readonly headDir = new Vector3();
@@ -88,18 +113,30 @@ export class NexusApp {
     this.main.mesh.lookAt(0, 1.2, 0);
     this.captions.mesh.position.set(0.28, 0.76, -0.5);
     this.captions.mesh.lookAt(0, 1.2, 0);
-    scene.add(this.main.mesh, this.captions.mesh, this.wrist.mesh);
+    // Evidence opens to the front left, mirroring the card, so both can be read side by side.
+    this.evidence.mesh.position.set(-0.27, 1.02, -0.5);
+    this.evidence.mesh.lookAt(0, 1.2, 0);
+    this.evidence.mesh.visible = false;
+    scene.add(this.main.mesh, this.captions.mesh, this.wrist.mesh, this.evidence.mesh, this.diorama.pivot);
 
     this.input = new HandInput(world.renderer, scene, {
-      panels: () => [this.main, this.captions, this.wrist],
+      panels: () => [this.main, this.captions, this.wrist, this.evidence],
       terrain: () => this.site?.terrain,
       button: (panel, id, edge, via) => this.onButton(panel, id, edge, via),
       terrainSelect: (p) => this.onTerrainSelect(p),
+      pivot: () => this.diorama.pivotPoint,
+      manipulate: (m) => {
+        if (m.yaw !== undefined) this.diorama.rotateBy(m.yaw);
+        if (m.zoom) this.diorama.setScale(zoomedScale(this.diorama.scale, m.zoom.fromM, m.zoom.toM));
+      },
     });
     this.voice = new VoiceClient((m) => this.onVoice(m));
     this.speaker = new Speaker({
       caption: (speaker, text) => this.caption(speaker, text),
-      playback: (kind, u) => this.reportPlayback(kind, u),
+      playback: (kind, u) => {
+        this.orbs.speaker(kind === "started" ? u.speaker : undefined);
+        this.reportPlayback(kind, u);
+      },
     });
     this.render();
     this.renderCaptions();
@@ -123,29 +160,36 @@ export class NexusApp {
       findings: Object.fromEntries([...this.findings].map(([k, f]) => [k, { id: f.id, status: f.status }])),
       captions: [...this.captionLog],
       lastCommand: this.lastCommand,
+      view: { yaw: this.diorama.yaw, scale: this.diorama.scale },
+      descriptors: [...this.descriptors],
+      evidenceOpen: this.evidenceOpen,
+      orbs: this.orbs.count,
     };
   }
 
   /** Every visible button, in world space: the emulator's target resolver and e2e tests drive the hands to these. */
   targets(): { name: string; position: Vector3; normal: Vector3; size: Vector3 }[] {
     const out: { name: string; position: Vector3; normal: Vector3; size: Vector3 }[] = [];
-    for (const panel of [this.main, this.captions, this.wrist]) {
+    for (const panel of [this.main, this.captions, this.wrist, this.evidence]) {
       if (!panel.mesh.visible) continue;
       for (const b of panel.buttons) {
         const w = panel.buttonWorld(b.id);
         if (w) out.push({ name: `${panel.name}/${b.id}`, ...w });
       }
     }
-    for (const [id, a] of this.site?.anchors ?? []) out.push({ name: `feature/${id}`, position: new Vector3(a.x, a.y, a.z), normal: new Vector3(0, 1, 0), size: new Vector3(0.05, 0.01, 0.05) });
+    for (const [id, a] of this.site?.anchors ?? []) out.push({ name: `feature/${id}`, position: this.diorama.toWorld(a), normal: new Vector3(0, 1, 0), size: new Vector3(0.05, 0.01, 0.05) });
     return out;
   }
 
   async loadSite(siteId: string): Promise<void> {
     const next = await loadSite(siteId);
-    if (this.site) this.world.scene.remove(this.site.group);
+    this.diorama.setContent(next.group, this.site?.group);
+    next.group.add(this.orbs.group);
+    this.orbs.clear();
     this.site = next;
-    this.world.scene.add(next.group);
     this.selected = undefined;
+    this.descriptors.clear();
+    this.closeEvidence();
     for (const f of next.features) this.paintRing(f.id);
     if (this.screen !== "pair" && this.screen !== "welcome") this.go("idle");
     this.sendContext();
@@ -157,6 +201,7 @@ export class NexusApp {
   frame(now: number): void {
     this.input.update();
     this.placeWristMenu();
+    this.orbs.update(now);
     if (this.ptt && now - this.ptt.lastSample >= POINTER_INTERVAL_MS) {
       this.ptt.lastSample = now;
       this.samplePointer(now);
@@ -208,6 +253,18 @@ export class NexusApp {
         if (arg === "logbook") return void this.showLogbook();
         if (arg === "stop") return this.speaker.stop();
         return;
+      case "view":
+        if (arg === "reset") this.diorama.reset();
+        else if (arg === "rotate_left" || arg === "rotate_right" || arg === "zoom_in" || arg === "zoom_out") this.diorama.step(arg);
+        return this.changed();
+      case "desc":
+        if (this.descriptors.has(arg)) this.descriptors.delete(arg);
+        else this.descriptors.add(arg);
+        return this.render();
+      case "ev":
+        return void this.openEvidence(arg);
+      case "evwin":
+        return this.closeEvidence();
       case "back":
         return this.go(this.selected && this.findings.has(this.selected) ? "finding" : "idle");
     }
@@ -245,6 +302,8 @@ export class NexusApp {
         return this.speaker.speaking ? this.speaker.stop() : this.readBriefing(f);
       case "sources":
         return this.go("sources");
+      case "evidence":
+        return this.go("evidence");
       case "close":
         this.selected = undefined;
         this.repaintRings();
@@ -285,13 +344,14 @@ export class NexusApp {
   private onTerrainSelect(point: Vector3): void {
     const site = this.site;
     if (!site || this.screen === "pair" || this.screen === "welcome") return;
-    const tile = sceneToTile(site.frame, point);
+    const tile = sceneToTile(site.frame, this.diorama.toLayout(point));
     const f = pickFeature(site.features, tile, PICK_TOLERANCE_M);
     if (!f) return;
     this.selectFeature(f.id);
   }
 
   private selectFeature(featureId: string): void {
+    if (this.selected !== featureId) this.descriptors.clear();
     this.selected = featureId;
     this.repaintRings();
     this.go(this.findings.has(featureId) ? "finding" : this.isResearching(featureId) ? "researching" : "selected");
@@ -304,15 +364,21 @@ export class NexusApp {
     const anchor = featureId ? site?.anchors.get(featureId) : undefined;
     if (!site || !featureId || !anchor) return;
     const local = sceneToTile(site.frame, anchor);
-    const obs = await this.api.createObservation(site.siteId, featureId, {
-      terrainFeatureId: featureId,
-      sceneLocal: { x: round(local.x), y: round(local.y), z: round(local.z) },
-    });
+    // Chips are the scientist's own words, recorded as such; agents may not turn them into claims (SIE VA1 spirit).
+    const description = this.descriptors.size ? `Scientist noted: ${[...this.descriptors].join(", ")}.` : undefined;
+    const obs = await this.api.createObservation(
+      site.siteId,
+      featureId,
+      { terrainFeatureId: featureId, sceneLocal: { x: round(local.x), y: round(local.y), z: round(local.z) } },
+      description,
+    );
     if (!obs.ok) {
       this.notice = "Could not start the investigation. Please try again.";
       return this.render();
     }
     this.observationFeature.set(obs.value.id, featureId);
+    // Before the event goes out: research events can arrive over the socket before this call returns.
+    this.orbs.begin(anchor);
     // A hand selection starts research only when the scientist pokes Investigate (services/orchestrator dispatcher).
     await this.api.emit("observation.selected", obs.value.id, { observationId: obs.value.id, action: "investigate", featureId });
     this.progress = ["Investigation requested. Waiting for the research team."];
@@ -336,6 +402,13 @@ export class NexusApp {
       case "agent.task.dispatched":
       case "agent.task.completed":
       case "agent.task.failed": {
+        if (typeof p.agentId === "string" && featureId === this.selected) {
+          if (this.orbs.count === 0) {
+            const a = featureId ? this.site?.anchors.get(featureId) : undefined;
+            if (a) this.orbs.begin(a);
+          }
+          this.orbs.set(p.agentId, e.type.endsWith("dispatched") ? "working" : e.type.endsWith("completed") ? "done" : "failed");
+        }
         const who = typeof p.agentId === "string" ? agentName(p.agentId) : "An agent";
         const what = e.type.endsWith("dispatched") ? "working" : e.type.endsWith("completed") ? "done" : "could not finish";
         this.progress = [...this.progress.filter((l) => !l.startsWith(`${who}:`)), `${who}: ${what}`];
@@ -363,6 +436,7 @@ export class NexusApp {
             const first = !this.findings.has(res.value.spatialAnchor.terrainFeatureId ?? "");
             this.storeFinding(res.value);
             const fid = res.value.spatialAnchor.terrainFeatureId;
+            if (e.type === "finding.review.required") this.orbs.finish(performance.now());
             if (e.type === "finding.review.required" && first && fid === this.selected) {
               this.go("finding");
               this.readBriefing(res.value);
@@ -452,7 +526,7 @@ export class NexusApp {
     cam.getWorldPosition(this.head);
     cam.getWorldDirection(this.headDir);
     const hit = this.input.rayHit("right");
-    const feature = hit.point && site ? pickFeature(site.features, sceneToTile(site.frame, hit.point), PICK_TOLERANCE_M) : undefined;
+    const feature = hit.point && site ? pickFeature(site.features, sceneToTile(site.frame, this.diorama.toLayout(hit.point)), PICK_TOLERANCE_M) : undefined;
     ptt.samples.push({
       tMs: Math.round(now - ptt.startedAt),
       rayFeatureId: feature?.id,
@@ -537,8 +611,17 @@ export class NexusApp {
       case "onboarding":
         if (this.screen === "welcome") this.onButton(this.main, `onboard:${c.action}`, "press", "ray");
         return;
+      case "zoom":
+        this.diorama.step(c.direction === "in" ? "zoom_in" : "zoom_out");
+        return;
+      case "rotate":
+        this.diorama.step(c.direction === "left" ? "rotate_left" : "rotate_right");
+        return;
+      case "reset":
+        this.diorama.reset();
+        return;
       default:
-        // Zoom, rotate, modes, whisper, pause and video marks land with later milestones (docs/TASKS.md Phase 2 and 5).
+        // Modes, whisper, pause and video marks land with later milestones (docs/TASKS.md Phase 2 and 5).
         this.caption("narrator", "That command is not available yet.");
     }
   }
@@ -553,7 +636,7 @@ export class NexusApp {
       selectedFindingId: this.selected ? this.findings.get(this.selected)?.id : undefined,
       candidates: site.features.map((f) => {
         const a = site.anchors.get(f.id) ?? { x: 0, y: 0, z: 0 };
-        return { id: f.id, spokenLabel: f.spokenLabel, aliases: f.aliases, position: a };
+        return { id: f.id, spokenLabel: f.spokenLabel, aliases: f.aliases, position: vec(this.diorama.toWorld(a)) };
       }),
       language: "en",
     });
@@ -609,7 +692,13 @@ export class NexusApp {
       case "selected":
         lines.push({ text: feature?.label ?? "Feature", tone: "title" });
         lines.push({ text: `Selected ${feature?.kind ?? "feature"}. Investigate sends it to the research team; every claim is checked by the integrity engine before you see it.`, tone: "body" });
+        lines.push({ text: "Optional: poke what you see. It is saved with the observation in your words.", tone: "muted" });
         rows.push([{ id: "sel:cancel", label: "Cancel" }, { id: "sel:investigate", label: "Investigate", style: "primary" }]);
+        if (feature) {
+          const chips = DESCRIPTOR_CHIPS[feature.kind];
+          rows.push(chips.slice(2).map((d) => this.chip(d)));
+          rows.push(chips.slice(0, 2).map((d) => this.chip(d)));
+        }
         break;
       case "researching":
         lines.push({ text: feature?.label ?? "Investigation", tone: "title" }, { text: "Researching", tone: "muted" });
@@ -629,6 +718,7 @@ export class NexusApp {
         }
         rows.unshift([
           ...(card.speakable ? [{ id: "card:hear", label: this.speaker.speaking ? "Stop" : "Hear it", style: "chip" as const }] : []),
+          { id: "card:evidence", label: "Evidence", style: "chip" },
           { id: "card:sources", label: "Sources", style: "chip" },
           { id: "card:close", label: "Close" },
         ]);
@@ -646,6 +736,15 @@ export class NexusApp {
         for (const s of finding?.sources ?? []) lines.push({ text: s.dataset, tone: "body", badge: s.evidenceId }, { text: s.sourceUrl, tone: "muted" });
         rows.push([{ id: "back:finding", label: "Back" }]);
         break;
+      case "evidence": {
+        lines.push({ text: "Evidence behind this finding", tone: "title" }, { text: "Poke one to open it beside the card.", tone: "muted" });
+        const ids = finding ? citedIds(finding) : [];
+        const label = (id: string) => this.evidenceLabel(id);
+        for (let i = 0; i < Math.min(ids.length, 6); i += 2) rows.unshift(ids.slice(i, i + 2).map((id) => ({ id: `ev:${id}`, label: label(id), style: id === this.evidenceOpen ? ("active" as const) : ("chip" as const) })));
+        rows.unshift([{ id: "back:finding", label: "Back" }]);
+        if (!this.evidenceData || this.evidenceData.siteId !== this.site?.siteId) void this.loadEvidence();
+        break;
+      }
       case "logbook":
         lines.push({ text: "Logbook", tone: "title" });
         if (this.logbookEntries.length === 0) lines.push({ text: "No reviews yet.", tone: "muted" });
@@ -682,6 +781,15 @@ export class NexusApp {
           { id: "wrist:logbook", label: "Logbook" },
           { id: "wrist:stop", label: "Stop speech" },
         ],
+        [
+          { id: "view:zoom_out", label: "Zoom −" },
+          { id: "view:reset", label: "Reset" },
+          { id: "view:zoom_in", label: "Zoom +" },
+        ],
+        [
+          { id: "view:rotate_left", label: "↺ Turn" },
+          { id: "view:rotate_right", label: "Turn ↻" },
+        ],
         SITES.map((s) => ({ id: `site:${s.siteId}`, label: s.short, style: s.siteId === site?.siteId ? ("chip" as const) : ("secondary" as const) })),
         [{ id: "wrist:ptt", label: talking ? "Listening… release to send" : "Hold to talk", style: talking ? "active" : "primary" }],
       ],
@@ -714,15 +822,104 @@ export class NexusApp {
     if (this.input.leftWrist(this.wristPose)) {
       const toHead = this.head.clone().sub(this.wristPose.position).normalize();
       const facing = Math.max(this.wristPose.palmNormal.dot(toHead), this.wristPose.palmNormal.y);
+      const wasVisible = mesh.visible;
       // Hysteresis so the menu does not flicker at the threshold; a held mic keeps it open.
-      mesh.visible = this.ptt !== undefined || facing > (mesh.visible ? 0.35 : 0.55);
+      mesh.visible = this.ptt !== undefined || facing > (wasVisible ? 0.35 : 0.55);
       if (!mesh.visible) return;
-      mesh.position.copy(this.wristPose.position).addScaledVector(this.wristPose.palmNormal, 0.05).add(new Vector3(0, 0.11, 0));
+      // Lift the menu so its lowest row clears the hand it floats over.
+      mesh.position.copy(this.wristPose.position).addScaledVector(this.wristPose.palmNormal, 0.05);
+      mesh.position.y += 0.06 + this.wrist.heightM / 2;
+      // Face the user when it opens, then hold that heading: a menu that swivels while a finger
+      // reaches for it moves its buttons out from under the fingertip.
+      if (!wasVisible || !this.wristFacingSet) {
+        mesh.lookAt(this.head);
+        this.wristFacingSet = true;
+      }
     } else {
+      // Controllers only: park the menu to the far left, clear of the evidence window.
       mesh.visible = true;
-      mesh.position.set(-0.28, 0.98, -0.42);
+      mesh.position.set(-0.5, 0.95, -0.38);
+      mesh.lookAt(this.head);
     }
-    mesh.lookAt(this.head);
+  }
+
+  private chip(d: string): ButtonSpec {
+    return { id: `desc:${d}`, label: d, style: this.descriptors.has(d) ? "active" : "chip" };
+  }
+
+  private async loadEvidence(): Promise<void> {
+    const site = this.site;
+    if (!site) return;
+    const res = await this.api.evidence(site.siteId);
+    if (!res.ok || this.site !== site) return;
+    this.evidenceData = { siteId: site.siteId, ...res.value };
+    if (this.screen === "evidence") this.render();
+  }
+
+  private evidenceLabel(id: string): string {
+    const item = this.evidenceData?.items.find((i) => i.id === id);
+    if (item) return item.spokenLabel.replace(/^the /, "");
+    const m = this.evidenceData?.measurements.find((x) => x.id === id);
+    return m ? `${m.quantity} (computed)` : id;
+  }
+
+  private async openEvidence(id: string): Promise<void> {
+    if (!this.evidenceData) await this.loadEvidence();
+    this.evidenceOpen = id;
+    this.renderEvidence();
+    this.evidence.mesh.visible = true;
+    if (this.screen === "evidence") this.render();
+    this.changed();
+  }
+
+  private closeEvidence(): void {
+    this.evidenceOpen = undefined;
+    this.evidence.mesh.visible = false;
+    if (this.screen === "evidence") this.render();
+    this.changed();
+  }
+
+  private renderEvidence(): void {
+    const id = this.evidenceOpen;
+    if (!id) return;
+    const lines: PanelLine[] = [];
+    const item = this.evidenceData?.items.find((i) => i.id === id);
+    const m = this.evidenceData?.measurements.find((x) => x.id === id);
+    let image: PanelContent["image"];
+    if (item) {
+      lines.push({ text: item.title, tone: "title", badge: item.id });
+      if (item.type === "image") {
+        const img = this.mediaFor(item.id);
+        if (img?.complete && img.naturalWidth > 0) image = { source: img, aspect: img.naturalWidth / img.naturalHeight };
+      }
+      if (item.dataset) lines.push({ text: `${item.dataset}${item.productId ? ` · ${item.productId}` : ""}`, tone: "body" });
+      // AGENTS.md rule 7: archival products are never presented as live.
+      if (item.acquiredAt) lines.push({ text: `Acquired ${item.acquiredAt.slice(0, 10)}. Archival data, not live.`, tone: "muted" });
+      if (item.excerpt) lines.push({ text: `“${item.excerpt}”`, tone: "body" });
+      lines.push({ text: `Credit: ${item.credit}`, tone: "muted" }, { text: item.license, tone: "muted" }, { text: item.sourceUrl, tone: "muted" });
+    } else if (m) {
+      // Numbers here come from packages/terrain, not a model (AGENTS.md rule 4).
+      lines.push({ text: `${m.quantity}: ${m.value} ${m.unit}`, tone: "title", badge: m.id });
+      lines.push({ text: "Computed by deterministic code from the terrain model, not by an AI model.", tone: "body" });
+      lines.push({ text: m.method, tone: "muted" }, { text: `Source: ${m.sourceEvidenceId}`, tone: "muted" });
+    } else {
+      lines.push({ text: id, tone: "title" }, { text: "This evidence is not in the site's evidence store.", tone: "warn" });
+    }
+    this.evidence.set({ lines, rows: [[{ id: "evwin:close", label: "Close" }]], image });
+  }
+
+  /** Image evidence has a crop in data/evidence-packs/media, served next to the terrain tiles. */
+  private mediaFor(id: string): HTMLImageElement | undefined {
+    let img = this.media.get(id);
+    if (!img) {
+      img = new Image();
+      img.onload = () => {
+        if (this.evidenceOpen === id) this.renderEvidence();
+      };
+      img.src = `${import.meta.env.BASE_URL}evidence-packs/media/${encodeURIComponent(id)}.png`;
+      this.media.set(id, img);
+    }
+    return img;
   }
 
   private paintRing(featureId: string): void {
@@ -762,6 +959,12 @@ function tick(via: "poke" | "ray"): void {
 function splitId(id: string): [string, string?] {
   const i = id.indexOf(":");
   return i < 0 ? [id] : [id.slice(0, i), id.slice(i + 1)];
+}
+
+/** Evidence and measurement ids the finding's claims cite, in order, without repeats. */
+function citedIds(f: ScientificFinding): string[] {
+  const ids = f.claims.flatMap((c) => [...(c.measurementIds ?? []), ...c.evidenceIds]);
+  return [...new Set(ids)];
 }
 
 function vec(v: Vector3): { x: number; y: number; z: number } {

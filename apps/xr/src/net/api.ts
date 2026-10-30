@@ -1,7 +1,7 @@
 // Headset ↔ services/api. Typed results, never raw errors (AGENTS.md §7). Responses are parsed with the shared zod
 // schemas, so the client only renders what the API actually returned.
-import { anyNexusEvent, observation, scientificFinding } from "@nexus/schemas";
-import type { EventType, NexusEvent, Observation, Result, ReviewDecision, ScientificFinding, SpatialAnchor } from "@nexus/schemas";
+import { anyNexusEvent, evidenceItem, measurementRecord, observation, scientificFinding } from "@nexus/schemas";
+import type { EvidenceItem, EventType, MeasurementRecord, NexusEvent, Observation, Result, ReviewDecision, ScientificFinding, SpatialAnchor } from "@nexus/schemas";
 import { z } from "zod";
 import { API_BASE, wsUrl } from "../config.js";
 
@@ -28,8 +28,13 @@ export class ApiClient {
     return r.ok ? { ok: true, value: { ...r.value, userId } } : r;
   }
 
-  createObservation(siteId: string, featureId: string, spatialAnchor: SpatialAnchor): Promise<Result<Observation>> {
-    return this.call("POST", "/observations", { siteId, source: "hand_select", featureId, spatialAnchor }, observation);
+  createObservation(siteId: string, featureId: string, spatialAnchor: SpatialAnchor, description?: string): Promise<Result<Observation>> {
+    return this.call("POST", "/observations", { siteId, source: "hand_select", featureId, spatialAnchor, description }, observation);
+  }
+
+  /** The site's curated evidence and code-computed measurements, for evidence windows. */
+  evidence(siteId: string): Promise<Result<{ items: EvidenceItem[]; measurements: MeasurementRecord[] }>> {
+    return this.call("GET", `/evidence/${encodeURIComponent(siteId)}`, undefined, z.object({ items: z.array(evidenceItem), measurements: z.array(measurementRecord) }));
   }
 
   getObservation(id: string): Promise<Result<Observation>> {
