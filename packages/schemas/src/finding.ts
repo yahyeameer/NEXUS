@@ -96,3 +96,16 @@ export const scientificDecisionInput = z.object({
   deicticConfidence: z.number().min(0).max(1).optional(),
 });
 export type ScientificDecisionInput = z.infer<typeof scientificDecisionInput>;
+
+/** One row of the append-only `reviews` table. Only a human session can create one (AGENTS.md rule 8). */
+export const reviewRecord = z.object({
+  findingId: z.string().min(1),
+  decision: reviewDecision,
+  /** Verbatim (SIE VA1). */
+  rationaleText: z.string().optional(),
+  rationaleUtteranceId: z.string().optional(),
+  reviewerId: z.string().min(1),
+  sessionId: z.string().min(1),
+  reviewedAt: isoTimestamp,
+});
+export type ReviewRecord = z.infer<typeof reviewRecord>;
