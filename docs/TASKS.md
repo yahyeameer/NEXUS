@@ -20,8 +20,8 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 - [ ] Prerecorded video panel + simulated (labelled) telemetry timeline
 - [ ] Push-to-talk on wrist menu; audio streaming to voice-gateway
 - [ ] Streaming STT with word timestamps; captions strip
-- [ ] Intent router + command grammar
-- [ ] Deictic resolver + clarification chips
+- [x] Intent router + command grammar
+- [ ] Deictic resolver + clarification chips (resolver + candidates done; chips land with the XR client)
 - [ ] FieldNote creation end to end
 
 ## Phase 3 — Agent research (Nov 3 – Nov 8)

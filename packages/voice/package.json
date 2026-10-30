@@ -9,5 +9,5 @@
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
   },
-  "dependencies": { "@nexus/schemas": "workspace:*" }
+  "dependencies": { "@nexus/schemas": "workspace:*", "@nexus/sie": "workspace:*" }
 }

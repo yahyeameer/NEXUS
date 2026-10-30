@@ -75,6 +75,9 @@ importers:
       '@nexus/schemas':
         specifier: workspace:*
         version: link:../schemas
+      '@nexus/sie':
+        specifier: workspace:*
+        version: link:../sie
 
   services/api:
     dependencies:
