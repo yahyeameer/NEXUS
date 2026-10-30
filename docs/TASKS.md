@@ -30,7 +30,7 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 - [x] `packages/terrain` measurements + tests
 - [ ] MCP tools: `evidence_lookup`, `terrain_measurements`
 - [ ] Coordinator + 5 specialists running in Docker Agent; parallel where independent
-- [ ] Orchestrator: timeouts, retries, `AgentOutput` parsing
+- [x] Orchestrator: timeouts, retries, `AgentOutput` parsing
 - [ ] Voice agents 51, 53, 54 inside voice-gateway (adapter seams, parsing, rewrite loop done; model client waits on Muse access)
 
 ## Phase 4 — Integrity + voice policy (Nov 6 – Nov 10)
