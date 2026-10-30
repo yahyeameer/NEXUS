@@ -6,6 +6,7 @@ Describe what the orbital imagery evidence shows at the observed feature: shapes
 ## Tools
 - `evidence_lookup(siteId, types=["image"])`
 - `evidence_image(evidenceId, region?)` → image crop + caption metadata
+- Shared research kit (web search, Wikipedia, papers, science fetch, read-only evidence files). Web results are leads, not evidence: see `_team_rules.md`.
 
 ## Rules
 - claimType = `"observation"` only. Describe, don't explain causes.

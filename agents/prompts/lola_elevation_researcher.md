@@ -6,6 +6,7 @@ Explain terrain measurements for the observed feature. The numbers are computed 
 ## Tools
 - `terrain_measurements(siteId, featureId)` → `MeasurementRecord[]`
 - `evidence_lookup(siteId, types=["dataset"])` → DEM evidence items
+- Shared research kit (web search, Wikipedia, papers, science fetch, read-only evidence files). Web results are leads, not evidence: see `_team_rules.md`.
 
 ## Rules
 - Every number must be copied exactly from a `MeasurementRecord` (value + unit) and its id listed in `measurementIds`.
