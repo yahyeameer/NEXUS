@@ -50,7 +50,7 @@ Not given to any agent: shell, file writes, code execution, memory, calculator, 
 | --- | --- |
 | `data/evidence-packs/<SITE_ID>.json` (validated as `evidencePack`) | `evidence_*`, `dataset_catalog` |
 | `data/evidence-packs/media/<EV-ID>.png\|jpg\|webp` | `evidence_image` returns the picture to the model |
-| `data/terrain/<SITE_ID>/measurements.json`, `features.json` | `terrain_measurements`, `site_features` |
+| `data/terrain/<SITE_ID>/dem.json`, `dem.bin`, `features.json`, measured by `packages/terrain` (`measureFeature`) | `terrain_measurements`, `site_features` |
 | `$NEXUS_RUN_DIR/context.json` (`agentRunContext`), written by the orchestrator per run | `observation_get`, `fieldnote_get` |
 | any text file under `data/` or `docs/` (symlinks resolved, binaries refused) | `data_files_list`, `data_file_read` |
 

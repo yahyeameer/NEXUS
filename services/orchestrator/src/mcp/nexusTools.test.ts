@@ -34,27 +34,26 @@ const pack = {
       title: "Fixture image of the test crater",
       spokenLabel: "fixture image",
       sourceUrl: "https://example.org/fixture/image",
-      region: { featureId: "F-1" },
+      region: { featureId: "TEST_CRATER" },
       credit: "test",
       license: "test",
     },
   ],
 };
-const measurements = {
+// Bowl crater on a 101 x 101 grid, 10 m posts: rim crest at r = 200 m around (500, 500).
+const DEM = { siteId: SITE, width: 101, height: 101, cellSizeM: 10, coordinateReferenceSystem: "TEST_LOCAL", sourceEvidenceId: "EV-FIXTURE_SITE-001" };
+function demBytes(): Buffer {
+  const buf = Buffer.alloc(DEM.width * DEM.height * 4);
+  for (let r = 0; r < DEM.height; r++)
+    for (let c = 0; c < DEM.width; c++) {
+      const d = Math.hypot(c * 10 - 500, r * 10 - 500);
+      buf.writeFloatLE(d <= 200 ? 50 * ((d / 200) ** 2 - 1) + 10 : 10 * Math.exp(-(d - 200) / 50), (r * DEM.width + c) * 4);
+    }
+  return buf;
+}
+const features = {
   siteId: SITE,
-  records: [
-    {
-      id: "MEAS-FIXTURE-1",
-      siteId: SITE,
-      featureId: "F-1",
-      quantity: "depth",
-      value: 1,
-      unit: "m",
-      method: "fixture",
-      sourceEvidenceId: "EV-FIXTURE_SITE-001",
-      computedAt: "2026-01-01T00:00:00.000Z",
-    },
-  ],
+  features: [{ id: "TEST_CRATER", siteId: SITE, kind: "crater", label: "Test crater", spokenLabel: "test crater", center: { x: 500, z: 500 }, rimRadiusM: 200 }],
 };
 const context = {
   runId: "RUN-1",
@@ -62,8 +61,8 @@ const context = {
     id: "OBS-1",
     siteId: SITE,
     source: "hand_select",
-    featureId: "F-1",
-    spatialAnchor: { terrainFeatureId: "F-1" },
+    featureId: "TEST_CRATER",
+    spatialAnchor: { terrainFeatureId: "TEST_CRATER" },
     createdBy: "tester",
     createdAt: "2026-01-01T00:00:00.000Z",
   },
@@ -86,11 +85,9 @@ beforeAll(async () => {
   await mkdir(path.join(root, "secret"), { recursive: true });
   await writeFile(path.join(root, "data", "evidence-packs", `${SITE}.json`), JSON.stringify(pack));
   await writeFile(path.join(root, "data", "evidence-packs", "media", "EV-FIXTURE_SITE-002.png"), Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0x0d]));
-  await writeFile(path.join(root, "data", "terrain", SITE, "measurements.json"), JSON.stringify(measurements));
-  await writeFile(
-    path.join(root, "data", "terrain", SITE, "features.json"),
-    JSON.stringify({ siteId: SITE, features: [{ id: "F-1", label: "Test crater", featureType: "crater" }] }),
-  );
+  await writeFile(path.join(root, "data", "terrain", SITE, "dem.json"), JSON.stringify(DEM));
+  await writeFile(path.join(root, "data", "terrain", SITE, "dem.bin"), demBytes());
+  await writeFile(path.join(root, "data", "terrain", SITE, "features.json"), JSON.stringify(features));
   await writeFile(path.join(root, "docs", "NOTE.md"), "hello docs");
   await writeFile(path.join(root, "secret", "key.txt"), "nope");
   await symlink(path.join(root, "secret"), path.join(root, "docs", "escape"));
@@ -130,8 +127,10 @@ describe("nexus agent tools", () => {
   });
 
   it("serves precomputed measurements, features, datasets and run context", async () => {
-    expect(JSON.parse((await call("terrain_measurements", { siteId: SITE, featureId: "F-1" })).text)[0].id).toBe("MEAS-FIXTURE-1");
-    expect(JSON.parse((await call("site_features", { siteId: SITE })).text)[0].featureType).toBe("crater");
+    const records = JSON.parse((await call("terrain_measurements", { siteId: SITE, featureId: "TEST_CRATER" })).text);
+    expect(records.map((m: { id: string }) => m.id)).toEqual(["MEAS-FIXTURE_SITE-TEST_CRATER-DEPTH", "MEAS-FIXTURE_SITE-TEST_CRATER-DIAMETER"]);
+    expect(records[0].sourceEvidenceId).toBe("EV-FIXTURE_SITE-001");
+    expect(JSON.parse((await call("site_features", { siteId: SITE })).text)[0].kind).toBe("crater");
     expect(JSON.parse((await call("dataset_catalog")).text)[0].datasets).toHaveLength(1);
     expect(JSON.parse((await call("observation_get")).text).observation.id).toBe("OBS-1");
   });
@@ -149,8 +148,8 @@ describe("nexus agent tools", () => {
     const posted = await call("team_note_post", {
       agentId: "26_lola_elevation_researcher",
       kind: "preview",
-      text: "Depth record available for F-1.",
-      refs: ["MEAS-FIXTURE-1"],
+      text: "Depth record available for the test crater.",
+      refs: ["MEAS-FIXTURE_SITE-TEST_CRATER-DEPTH"],
     });
     expect(posted.isError).toBe(false);
     const q = await call("team_note_post", {

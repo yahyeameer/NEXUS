@@ -139,7 +139,7 @@ export function buildNexusToolServer(store: DataStore, board: TeamBoard): McpSer
   server.registerTool(
     "terrain_measurements",
     {
-      description: "MeasurementRecords computed by packages/terrain. Copy numbers exactly and cite the MEAS- id; never compute new numbers.",
+      description: "MeasurementRecords computed by packages/terrain from the site DEM. Copy numbers exactly and cite the MEAS- id; never compute new numbers.",
       inputSchema: { siteId, featureId: z.string().optional() },
       annotations: READ_ONLY,
     },
@@ -149,7 +149,7 @@ export function buildNexusToolServer(store: DataStore, board: TeamBoard): McpSer
 
   server.registerTool(
     "site_features",
-    { description: "Labelled terrain features the scientist can select at a site.", inputSchema: { siteId }, annotations: READ_ONLY },
+    { description: "Labelled terrain features at a site (craters, rilles, slopes, points) with ids, labels and spoken labels.", inputSchema: { siteId }, annotations: READ_ONLY },
     async ({ siteId }) => unwrap(await store.features(siteId), (features) => json(features)),
   );
 

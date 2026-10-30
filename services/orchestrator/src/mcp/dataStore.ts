@@ -3,14 +3,14 @@ import path from "node:path";
 import {
   agentRunContext,
   evidencePack,
-  measurementFile,
-  siteFeatures,
+  featureCollection,
   type AgentRunContext,
   type EvidenceItem,
   type MeasurementRecord,
   type Result,
-  type SiteFeature,
+  type TerrainFeature,
 } from "@nexus/schemas";
+import { measureFeature, parseDem } from "@nexus/terrain";
 
 /** Directories agents may read, relative to the repo root (PRD §9: read-only source data). */
 export const READABLE_ROOTS = ["data", "docs"] as const;
@@ -71,20 +71,42 @@ export class DataStore {
     return (await this.allEvidence()).find((e) => e.id === evidenceId);
   }
 
+  /**
+   * MeasurementRecords computed by packages/terrain from the site's DEM and labelled features.
+   * Agents never compute numbers (AGENTS.md rule 4); this is the deterministic code that does.
+   */
   async measurements(siteId: string): Promise<Result<MeasurementRecord[]>> {
-    if (!SITE_ID.test(siteId)) return { ok: false, error: `invalid siteId: ${siteId}` };
-    const raw = await readJson(path.join(this.config.root, "data", "terrain", siteId, "measurements.json"));
-    if (!raw.ok) return { ok: true, value: [] };
-    const file = measurementFile.safeParse(raw.value);
-    if (!file.success) return { ok: false, error: `measurements for ${siteId} failed validation` };
-    return { ok: true, value: file.data.records };
+    const features = await this.features(siteId);
+    if (!features.ok) return features;
+    if (features.value.length === 0) return { ok: true, value: [] };
+    const dir = path.join(this.config.root, "data", "terrain", siteId);
+    const header = await readJson(path.join(dir, "dem.json"));
+    if (!header.ok) return { ok: true, value: [] };
+    let bytes: Buffer;
+    let computedAt: string;
+    try {
+      bytes = await readFile(path.join(dir, "dem.bin"));
+      // The DEM's timestamp keeps records stable across calls and agents in a run.
+      computedAt = (await stat(path.join(dir, "dem.bin"))).mtime.toISOString();
+    } catch {
+      return { ok: true, value: [] };
+    }
+    const grid = parseDem(header.value, bytes);
+    if (!grid.ok) return grid;
+    const records: MeasurementRecord[] = [];
+    for (const feature of features.value) {
+      const res = measureFeature(grid.value, feature, computedAt);
+      if (!res.ok) return { ok: false, error: `${feature.id}: ${res.error}` };
+      records.push(...res.value);
+    }
+    return { ok: true, value: records };
   }
 
-  async features(siteId: string): Promise<Result<SiteFeature[]>> {
+  async features(siteId: string): Promise<Result<TerrainFeature[]>> {
     if (!SITE_ID.test(siteId)) return { ok: false, error: `invalid siteId: ${siteId}` };
     const raw = await readJson(path.join(this.config.root, "data", "terrain", siteId, "features.json"));
     if (!raw.ok) return { ok: true, value: [] };
-    const file = siteFeatures.safeParse(raw.value);
+    const file = featureCollection.safeParse(raw.value);
     if (!file.success) return { ok: false, error: `features for ${siteId} failed validation` };
     return { ok: true, value: file.data.features };
   }
@@ -92,7 +114,8 @@ export class DataStore {
   /** True when an ID is a known evidence item or measurement record. */
   async idExists(id: string): Promise<boolean> {
     if (id.startsWith("MEAS-")) {
-      for (const site of await this.listSites()) {
+      for (const site of await safeReaddir(path.join(this.config.root, "data", "terrain"))) {
+        if (!SITE_ID.test(site)) continue;
         const res = await this.measurements(site);
         if (res.ok && res.value.some((m) => m.id === id)) return true;
       }

@@ -1,29 +1,6 @@
 import { z } from "zod";
 import { isoTimestamp } from "./common.js";
-import { measurementRecord } from "./evidence.js";
 import { fieldNote, observation } from "./observation.js";
-
-/** `data/terrain/<SITE_ID>/features.json`: labelled features the scientist can select (DATASETS.md step 4). */
-export const siteFeature = z.object({
-  id: z.string().min(1),
-  label: z.string().min(1),
-  featureType: z.string().min(1),
-  spokenLabel: z.string().min(1).optional(),
-});
-export type SiteFeature = z.infer<typeof siteFeature>;
-
-export const siteFeatures = z.object({
-  siteId: z.string().min(1),
-  features: z.array(siteFeature),
-});
-export type SiteFeatures = z.infer<typeof siteFeatures>;
-
-/** `data/terrain/<SITE_ID>/measurements.json`, written by packages/terrain. */
-export const measurementFile = z.object({
-  siteId: z.string().min(1),
-  records: z.array(measurementRecord),
-});
-export type MeasurementFile = z.infer<typeof measurementFile>;
 
 /** Written by services/orchestrator into NEXUS_RUN_DIR before a team run; read by the agent tools. */
 export const agentRunContext = z.object({
