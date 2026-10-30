@@ -12,6 +12,8 @@ export interface GatewayDeps {
   stt: SpeechToTextAdapter;
   tts: TextToSpeechAdapter;
   reasoning?: ReasoningAdapter;
+  /** Dev and emulator only: each socket gets its own scripted STT fed by `ptt.simulated_transcript`. */
+  simulatedSpeech?: boolean;
 }
 
 /** Max audio frame size; anything larger is dropped rather than buffered. */
@@ -29,7 +31,14 @@ export function buildServer(deps: GatewayDeps = { stt: new FakeSpeechToText(), t
         socket.close(1011, "api not configured");
         return;
       }
-      const session = new VoiceSession({ api, stt: deps.stt, tts: deps.tts, reasoning: deps.reasoning, send: (m) => socket.send(JSON.stringify(m)) });
+      const simulated = deps.simulatedSpeech ? new FakeSpeechToText() : undefined;
+      const session = new VoiceSession({
+        api,
+        stt: simulated ?? deps.stt,
+        tts: deps.tts,
+        reasoning: deps.reasoning,
+        send: (m) => socket.send(JSON.stringify(m)),
+      });
       // Handle messages in order so ptt.end never overtakes its audio frames.
       let queue = Promise.resolve();
       socket.on("message", (data: Buffer, isBinary: boolean) => {
@@ -46,6 +55,11 @@ export function buildServer(deps: GatewayDeps = { stt: new FakeSpeechToText(), t
           }
           const msg = voiceClientMessage.safeParse(raw);
           if (!msg.success) return socket.send(JSON.stringify({ type: "error", message: "invalid message" }));
+          if (msg.data.type === "ptt.simulated_transcript") {
+            if (!simulated || !session.authenticated) return socket.send(JSON.stringify({ type: "error", message: "simulated speech is disabled" }));
+            simulated.say(msg.data.text);
+            return;
+          }
           try {
             await session.handle(msg.data);
           } catch (e) {

@@ -11,6 +11,8 @@ const app = buildServer({
   api: new HttpApi(process.env.API_URL ?? "http://localhost:4000", process.env.VOICE_GATEWAY_TOKEN ?? ""),
   stt: new FakeSpeechToText(),
   tts: new SilentTextToSpeech(),
+  // `pnpm dev:xr` sets this so the desktop emulator can type what it would say (docs/TESTING.md).
+  simulatedSpeech: process.env.NEXUS_SIMULATED_STT === "1",
 });
 app.listen({ port, host }).catch((err: unknown) => {
   app.log.error(err);

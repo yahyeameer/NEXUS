@@ -39,6 +39,12 @@ export const voiceClientMessage = z.discriminatedUnion("type", [
   z.object({ type: z.literal("ptt.end") }),
   /** Hand path for a clarification: poke the highlighted candidate (INTERACTION.md parity table). */
   z.object({ type: z.literal("clarify.choose"), featureId: z.string().min(1) }),
+  /**
+   * Emulator only (docs/TESTING.md "simulated voice input"): the transcript the scripted STT returns for the
+   * current push-to-talk, typed on the desktop until an STT provider is chosen. The gateway refuses it unless
+   * started with NEXUS_SIMULATED_STT=1, and the mic audio still streams as on a headset.
+   */
+  z.object({ type: z.literal("ptt.simulated_transcript"), text: z.string().min(1).max(500) }),
 ]);
 export type VoiceClientMessage = z.infer<typeof voiceClientMessage>;
 

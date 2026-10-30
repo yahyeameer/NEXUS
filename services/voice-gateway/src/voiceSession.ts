@@ -81,6 +81,9 @@ export class VoiceSession {
         return this.finishUtterance();
       case "clarify.choose":
         return this.completeClarification(msg.featureId);
+      case "ptt.simulated_transcript":
+        // Consumed by server.ts, which owns the per-socket scripted STT.
+        return;
     }
   }
 

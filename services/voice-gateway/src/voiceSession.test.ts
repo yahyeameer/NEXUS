@@ -10,6 +10,7 @@ import { draft, evidence, geologyOutput, imageryOutput, lolaOutput, measurements
 import { FakeReasoning } from "./adapters/reasoningAdapter.js";
 import { FakeSpeechToText, SilentTextToSpeech } from "./adapters/speechAdapter.js";
 import type { Api } from "./apiClient.js";
+import { buildServer as buildGateway } from "./server.js";
 import { VoiceSession } from "./voiceSession.js";
 
 const VOICE = "voice-token";
@@ -196,5 +197,44 @@ describe("VoiceSession", () => {
 
     await speak("");
     expect(spoken()).toContain("I didn't catch that.");
+  });
+});
+
+describe("simulated speech (emulator)", () => {
+  async function socket(simulatedSpeech: boolean) {
+    const gateway = buildGateway({ api: injectApi(api), stt: new FakeSpeechToText(), tts: new SilentTextToSpeech(), simulatedSpeech });
+    await gateway.ready();
+    const ws = await gateway.injectWS("/voice");
+    const inbox: VoiceServerMessage[] = [];
+    ws.on("message", (d: Buffer) => inbox.push(JSON.parse(d.toString()) as VoiceServerMessage));
+    const send = (m: object) => ws.send(JSON.stringify(m));
+    const until = async (type: string) => {
+      for (let i = 0; i < 200 && !inbox.some((m) => m.type === type); i++) await new Promise((r) => setTimeout(r, 5));
+      return inbox.find((m) => m.type === type);
+    };
+    return { gateway, ws, inbox, send, until };
+  }
+
+  it("routes a typed transcript like speech, with the mic audio still streamed", async () => {
+    const s = await socket(true);
+    s.send({ type: "auth", ...human });
+    await s.until("ready");
+    s.send({ type: "ptt.start", sampleRateHz: 16000 });
+    s.ws.send(new Uint8Array(3200));
+    s.send({ type: "ptt.simulated_transcript", text: "next site" });
+    s.send({ type: "ptt.end" });
+    expect(await s.until("command")).toMatchObject({ command: { kind: "next_site" } });
+    s.ws.terminate();
+    await s.gateway.close();
+  });
+
+  it("is refused unless the gateway was started for the emulator", async () => {
+    const s = await socket(false);
+    s.send({ type: "auth", ...human });
+    await s.until("ready");
+    s.send({ type: "ptt.simulated_transcript", text: "next site" });
+    expect(await s.until("error")).toEqual({ type: "error", message: "simulated speech is disabled" });
+    s.ws.terminate();
+    await s.gateway.close();
   });
 });

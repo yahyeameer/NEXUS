@@ -8,13 +8,14 @@
   },
   "scripts": {
     "dev": "pnpm --parallel --filter \"./services/*\" --filter @nexus/xr dev",
-    "dev:xr": "pnpm --filter @nexus/xr dev",
+    "dev:xr": "node scripts/devXr.mjs",
     "build": "pnpm -r build",
     "test": "vitest run",
     "test:e2e": "pnpm --filter @nexus/xr test:e2e",
     "lint": "eslint .",
     "typecheck": "pnpm -r typecheck",
-    "sie:redteam": "vitest run --project redteam --passWithNoTests"
+    "sie:redteam": "vitest run --project redteam --passWithNoTests",
+    "dev:xr:client": "pnpm --filter @nexus/xr dev"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

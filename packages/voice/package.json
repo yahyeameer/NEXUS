@@ -4,10 +4,14 @@
   "private": true,
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./browser": "./src/browser.ts"
   },
   "scripts": {
     "typecheck": "tsc -p tsconfig.json"
   },
-  "dependencies": { "@nexus/schemas": "workspace:*", "@nexus/sie": "workspace:*" }
+  "dependencies": {
+    "@nexus/schemas": "workspace:*",
+    "@nexus/sie": "workspace:*"
+  }
 }
