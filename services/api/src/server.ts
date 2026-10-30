@@ -128,6 +128,18 @@ export function buildServer(deps: ServerDeps = defaultDeps()) {
     return { ok: true, value: await store.listFieldNotes(req.params.id) };
   });
 
+  app.get<{ Params: { siteId: string } }>("/evidence/:siteId", async (req, reply) => {
+    if (!allow(req, reply, "any")) return;
+    const { siteId } = req.params;
+    return {
+      ok: true,
+      value: {
+        items: evidence.items.filter((i) => i.siteId === siteId),
+        measurements: evidence.measurements.filter((m) => m.siteId === siteId),
+      },
+    };
+  });
+
   // --- Utterances -----------------------------------------------------------------------------
   app.post("/utterances", async (req, reply) => {
     if (!allow(req, reply, "human", "voice-gateway")) return;

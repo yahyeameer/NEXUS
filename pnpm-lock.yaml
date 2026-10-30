@@ -137,6 +137,9 @@ importers:
 
   services/voice-gateway:
     dependencies:
+      '@fastify/websocket':
+        specifier: ^11.3.4
+        version: 11.3.4
       '@nexus/schemas':
         specifier: workspace:*
         version: link:../../packages/schemas

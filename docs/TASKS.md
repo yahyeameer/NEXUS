@@ -18,7 +18,7 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 
 - [ ] Ray/pinch selection of labelled features; observation registration
 - [ ] Prerecorded video panel + simulated (labelled) telemetry timeline
-- [ ] Push-to-talk on wrist menu; audio streaming to voice-gateway
+- [ ] Push-to-talk on wrist menu; audio streaming to voice-gateway (gateway side done; wrist menu lands with the XR client)
 - [ ] Streaming STT with word timestamps; captions strip
 - [x] Intent router + command grammar
 - [ ] Deictic resolver + clarification chips (resolver + candidates done; chips land with the XR client)
@@ -31,12 +31,12 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 - [ ] MCP tools: `evidence_lookup`, `terrain_measurements`
 - [ ] Coordinator + 5 specialists running in Docker Agent; parallel where independent
 - [ ] Orchestrator: timeouts, retries, `AgentOutput` parsing
-- [ ] Voice agents 51, 53, 54 inside voice-gateway
+- [ ] Voice agents 51, 53, 54 inside voice-gateway (adapter seams, parsing, rewrite loop done; model client waits on Muse access)
 
 ## Phase 4 — Integrity + voice policy (Nov 6 – Nov 10)
 
 - [x] Validators V1–V9 + tests
-- [ ] Voice validators VV1–VV3 + rewrite loop (validators + REWRITE → SILENT decision done; rewrite call lands with voice-gateway)
+- [x] Voice validators VV1–VV3 + rewrite loop
 - [x] Jev decision questions wired (or fallback)
 - [x] Red-team suite green in CI
 - [ ] Escalation + "Removed: no evidence" list
