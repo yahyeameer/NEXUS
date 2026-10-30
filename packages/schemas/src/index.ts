@@ -8,3 +8,4 @@ export * from "./voiceUtterance.js";
 export * from "./events.js";
 export * from "./terrain.js";
 export * from "./sie.js";
+export * from "./agentTools.js";
