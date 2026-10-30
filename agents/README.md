@@ -30,16 +30,38 @@ The Jev routing decision can drop any of these. Only the coordinator dispatches;
 
 | Toolset | What | Who |
 | --- | --- | --- |
+| `private_think` | `think`: the agent's own scratchpad, isolated per agent | all 20 |
+| `team_todo` | Shared todo list for the whole team (`todo`, `shared: true`) | all 20 |
+| `team_board` | `team_note_post`: previews, questions, answers, handoffs, cautions for other agents | all 20 |
+| `nexus_data` | NEXUS tool server, read-only: `evidence_lookup`, `evidence_get`, `evidence_search`, `evidence_image`, `dataset_catalog`, `terrain_measurements`, `site_features`, `observation_get`, `fieldnote_get`, `data_files_list`, `data_file_read`, `team_notes_read` | all 20 |
 | `web_search` | DuckDuckGo `search` (Docker MCP `docker:duckduckgo`) | all 20 |
 | `wikipedia` | Wikipedia search and summaries (`docker:wikipedia-mcp`) | all 20 |
 | `papers` | Crossref, OpenAlex, Semantic Scholar, arXiv metadata search (`docker:paper-search`, no downloads) | all 20 |
 | `science_fetch` | GET-only page reader limited to NASA, USGS, LPI, ADS, arXiv and a few other science hosts | all 20 |
-| `nexus_evidence` | Read-only NEXUS MCP: `evidence_lookup`, `evidence_image`, `terrain_measurements`, `observation_get`, `fieldnote_get`, `site_features` | all 20 |
-| `local_data` | Read-only filesystem over `data/evidence-packs`, `data/terrain`, `docs` | all 20 |
-| `think` / `todo` | Scratchpad / task list | coordinator, hypothesis, skeptic, contradiction |
 | `evidence_candidates` | `evidence_candidate_propose`: queue a web source for curation | the 7 literature-facing agents |
 
 Not given to any agent: shell, file writes, code execution, memory, calculator, paper downloads, DuckDuckGo `fetch_content` (it would bypass the fetch domain list). `runtime.safety: restricted` denies any tool call that is not allowed or read-only.
+
+### The NEXUS tool server
+
+`services/orchestrator/src/mcp/` (`pnpm --filter @nexus/orchestrator mcp`). docker-agent starts one stdio process per agent from the `mcps.nexus` entry in `nexus.yaml`.
+
+| Reads from | Tools |
+| --- | --- |
+| `data/evidence-packs/<SITE_ID>.json` (validated as `evidencePack`) | `evidence_*`, `dataset_catalog` |
+| `data/evidence-packs/media/<EV-ID>.png\|jpg\|webp` | `evidence_image` returns the picture to the model |
+| `data/terrain/<SITE_ID>/measurements.json`, `features.json` | `terrain_measurements`, `site_features` |
+| `$NEXUS_RUN_DIR/context.json` (`agentRunContext`), written by the orchestrator per run | `observation_get`, `fieldnote_get` |
+| any text file under `data/` or `docs/` (symlinks resolved, binaries refused) | `data_files_list`, `data_file_read` |
+
+Writes go only to the run directory (`$NEXUS_RUN_DIR`, default `.nexus-run/`, git-ignored): `team-board.jsonl` and `evidence-candidates.jsonl`. Because every agent's server process reads the same files, a note one agent posts is visible to the next. Note `refs` are checked against the evidence store, and candidates must be https URLs on the allowed science hosts.
+
+### Thinking and collaboration
+
+- Each agent thinks on its own: `think` is scoped per agent, so one agent's reasoning never leaks into another's context.
+- Agents collaborate through two shared surfaces: the team todo list (the coordinator publishes the plan; specialists tick off and add items) and the team board (agents read it first, then post previews, cautions, questions to a named agent, and answers).
+- The coordinator reads the board between phases and routes questions to the agent they are for, re-dispatching once if that agent already ran.
+- Board notes are context, never evidence: the SIE ignores them and the scientist never sees them.
 
 ### Web results are leads, not evidence
 
@@ -62,7 +84,8 @@ All agents except the coordinator and synthesis return `AgentOutput` (`packages/
 
 ## Requirements before a live run
 
-- `services/orchestrator/dist/mcp/nexusTools.js` (not built yet) must expose the tools above, mark the read tools with `readOnlyHint: true` (the toolset is `readonly`, so unannotated tools are filtered out), and write `evidence_candidate_propose` only to a quarantined queue.
+- `pnpm install` (the tool server runs with `tsx`), and evidence packs and terrain files in `data/` for the sites you run.
+- The orchestrator sets `NEXUS_RUN_DIR` to a fresh directory per run and writes `context.json` there.
 - Docker MCP Toolkit available for the `docker:` refs.
 - Backend env: `MUSE_BASE_URL`, `MUSE_API_KEY`, `MUSE_MODEL`, `FAST_BASE_URL`, `FAST_API_KEY`, `FAST_MODEL` (see `.env.example`).
 
