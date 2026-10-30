@@ -1,0 +1,129 @@
+{
+  "outputs": [
+    {
+      "agentId": "26_lola_elevation_researcher",
+      "output": {
+        "agentId": "26_lola_elevation_researcher",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [
+          {
+            "text": "The LROC terrain model gives Elbow crater a depth of about 34 m.",
+            "claimType": "measurement",
+            "evidenceIds": [
+              "EV-ELBOW_CRATER-001"
+            ],
+            "measurementIds": [
+              "MEAS-ELBOW_CRATER-ELBOW_CRATER-DEPTH"
+            ]
+          },
+          {
+            "text": "The LROC terrain model gives a rim-to-rim diameter of about 373 m.",
+            "claimType": "measurement",
+            "evidenceIds": [
+              "EV-ELBOW_CRATER-001"
+            ],
+            "measurementIds": [
+              "MEAS-ELBOW_CRATER-ELBOW_CRATER-DIAMETER"
+            ]
+          }
+        ],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run."
+      }
+    },
+    {
+      "agentId": "25_lroc_imagery_researcher",
+      "output": {
+        "agentId": "25_lroc_imagery_researcher",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [
+          {
+            "text": "The orthophoto shows a rounded, subdued depression at the labelled position, beside the shadowed rille wall.",
+            "claimType": "observation",
+            "evidenceIds": [
+              "EV-ELBOW_CRATER-002"
+            ]
+          }
+        ],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run."
+      }
+    },
+    {
+      "agentId": "11_lunar_geology_researcher",
+      "output": {
+        "agentId": "11_lunar_geology_researcher",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [
+          {
+            "text": "A depth this shallow for its width is consistent with a degraded crater.",
+            "claimType": "interpretation",
+            "evidenceIds": [
+              "MEAS-ELBOW_CRATER-ELBOW_CRATER-DEPTH",
+              "MEAS-ELBOW_CRATER-ELBOW_CRATER-DIAMETER"
+            ]
+          }
+        ],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run."
+      }
+    },
+    {
+      "agentId": "20_historical_observation_researcher",
+      "output": {
+        "agentId": "20_historical_observation_researcher",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [
+          {
+            "text": "The first Apollo 15 moonwalk traverse reached Elbow crater.",
+            "claimType": "observation",
+            "evidenceIds": [
+              "EV-ELBOW_CRATER-005"
+            ]
+          }
+        ],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run."
+      }
+    },
+    {
+      "agentId": "37_uncertainty_analyst",
+      "output": {
+        "agentId": "37_uncertainty_analyst",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run.",
+        "uncertainty": {
+          "level": "medium",
+          "explanation": "Elbow sits on the rille rim, so the radial profiles mix crater and rille topography."
+        }
+      }
+    }
+  ],
+  "synthesis": {
+    "findingDraft": {
+      "title": "Elbow crater: a shallow crater on the rille rim",
+      "summary": "The LROC terrain model gives Elbow crater a depth of about 34 m and a rim-to-rim diameter of about 373 m. A depth this shallow for its width is consistent with a degraded crater.",
+      "claimType": "interpretation",
+      "possibleInterpretations": [],
+      "uncertainty": {
+        "level": "medium",
+        "explanation": "Elbow sits on the rille rim, so the radial profiles mix crater and rille topography."
+      }
+    },
+    "spokenBriefingDraft": {
+      "script": "I investigated Elbow crater. The LROC terrain model gives about 34 metres of depth. The LROC terrain model gives about 373 metres across the rim. This is consistent with a degraded crater. Overall uncertainty is medium.",
+      "sentenceEvidence": [
+        [],
+        [
+          "MEAS-ELBOW_CRATER-ELBOW_CRATER-DEPTH"
+        ],
+        [
+          "MEAS-ELBOW_CRATER-ELBOW_CRATER-DIAMETER"
+        ],
+        [
+          "MEAS-ELBOW_CRATER-ELBOW_CRATER-DEPTH",
+          "MEAS-ELBOW_CRATER-ELBOW_CRATER-DIAMETER"
+        ],
+        []
+      ],
+      "speakerAgentId": "26_lola_elevation_researcher"
+    }
+  }
+}

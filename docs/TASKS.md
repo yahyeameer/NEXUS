@@ -11,7 +11,7 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 - [ ] STT/TTS provider bake-off on Quest: latency, word timestamps, languages → pick
 - [ ] Test `speechSynthesis` and `getUserMedia` behaviour in Quest Browser
 - [ ] IWSDK app boots on Quest over HTTPS; hand tracking + passthrough on
-- [ ] Export first DEM + texture from Moon Trek; render tile on desk
+- [ ] Export first DEM + texture from Moon Trek; render tile on desk _(DEM + texture done from the LROC NAC DTM in PDS instead of Moon Trek; rendering lands with the XR client)_
 - [x] `packages/schemas` with all models from DATA_MODELS.md
 
 ## Phase 2 — Observation + voice capture (Nov 1 – Nov 5)
@@ -26,7 +26,7 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 
 ## Phase 3 — Agent research (Nov 3 – Nov 8)
 
-- [ ] Evidence packs for 3 sites (verified URLs, credits)
+- [x] Evidence packs for 3 sites (verified URLs, credits)
 - [x] `packages/terrain` measurements + tests
 - [ ] MCP tools: `evidence_lookup`, `terrain_measurements`
 - [ ] Coordinator + 5 specialists running in Docker Agent; parallel where independent
@@ -48,7 +48,7 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 - [ ] Grounded Q&A (voice + chips) and provenance answers
 - [ ] Review by poke + voice; rationale stored verbatim; Logbook
 - [ ] Marker visual + audio states
-- [ ] Precomputed mode for all 3 sites + pre-generated audio
+- [ ] Precomputed mode for all 3 sites + pre-generated audio _(precomputed research done for all 3 sites; audio waits on the TTS provider)_
 - [ ] ⏳ Evidence Debate (only if on schedule)
 
 ## Phase 6 — Test, film, submit (Nov 13 – Nov 17)

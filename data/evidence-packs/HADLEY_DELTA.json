@@ -1,0 +1,90 @@
+{
+  "siteId": "HADLEY_DELTA",
+  "version": 1,
+  "items": [
+    {
+      "id": "EV-HADLEY_DELTA-001",
+      "siteId": "HADLEY_DELTA",
+      "type": "dataset",
+      "title": "LROC NAC digital terrain model, Apollo 15 landing site (2 m/post)",
+      "spokenLabel": "the LROC terrain model",
+      "dataset": "LRO LROC NAC DTM",
+      "productId": "NAC_DTM_APOLLO15_E261N0036",
+      "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_E261N0036.IMG",
+      "acquiredAt": "2009-10-30",
+      "region": {
+        "featureId": "HADLEY_DELTA_SLOPE",
+        "bbox": [
+          -356.43495,
+          25.70056,
+          -356.32488,
+          25.79949
+        ],
+        "crs": "planetocentric longitude/latitude, degrees (west, south, east, north)"
+      },
+      "credit": "NASA/GSFC/Arizona State University",
+      "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+    },
+    {
+      "id": "EV-HADLEY_DELTA-002",
+      "siteId": "HADLEY_DELTA",
+      "type": "image",
+      "title": "LROC NAC orthophoto M111578606, Apollo 15 landing site (2 m/pixel)",
+      "spokenLabel": "the LROC orthophoto",
+      "dataset": "LRO LROC NAC orthophoto",
+      "productId": "NAC_DTM_APOLLO15_M111578606_2M",
+      "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_M111578606_2M.IMG",
+      "acquiredAt": "2009-10-30T21:48:58Z",
+      "region": {
+        "featureId": "HADLEY_DELTA_SLOPE",
+        "bbox": [
+          -356.43495,
+          25.70056,
+          -356.32488,
+          25.79949
+        ],
+        "crs": "planetocentric longitude/latitude, degrees (west, south, east, north)"
+      },
+      "credit": "NASA/GSFC/Arizona State University",
+      "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+    },
+    {
+      "id": "EV-HADLEY_DELTA-003",
+      "siteId": "HADLEY_DELTA",
+      "type": "text",
+      "title": "LROC NAC DTM README: accuracy of the Apollo 15 terrain model",
+      "spokenLabel": "the terrain model notes",
+      "dataset": "LRO LROC NAC DTM",
+      "productId": "NAC_DTM_APOLLO15_E261N0036",
+      "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_README.TXT",
+      "excerpt": "Products are tied to LOLA elevations with RMS error of 1.74 m to 7.0 different LOLA orbit tracks.",
+      "credit": "NASA/GSFC/Arizona State University",
+      "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+    },
+    {
+      "id": "EV-HADLEY_DELTA-004",
+      "siteId": "HADLEY_DELTA",
+      "type": "text",
+      "title": "USGS Gazetteer of Planetary Nomenclature: Mons Hadley Delta (diameter 17.24 km, centre 25.72 N 3.71 E)",
+      "spokenLabel": "the planetary names gazetteer",
+      "sourceUrl": "https://planetarynames.wr.usgs.gov/Feature/3984",
+      "excerpt": "Named from nearby mountain (Mons Hadley).",
+      "region": {
+        "featureId": "HADLEY_DELTA_SLOPE"
+      },
+      "credit": "USGS Astrogeology Science Center / IAU WGPSN",
+      "license": "Public domain: U.S. Government work (USGS Gazetteer of Planetary Nomenclature)"
+    },
+    {
+      "id": "EV-HADLEY_DELTA-005",
+      "siteId": "HADLEY_DELTA",
+      "type": "text",
+      "title": "NASA Apollo 15 mission page: photo caption, Hadley Delta",
+      "spokenLabel": "the NASA Apollo 15 photo caption",
+      "sourceUrl": "https://www.nasa.gov/mission/apollo-15/",
+      "excerpt": "Hadley Delta in the background rises approximately 4,000 meters (about 13,124 feet) above the plain. The base of the mountain is approximately 5 kilometers (about three statue miles) away.",
+      "credit": "NASA",
+      "license": "NASA web content; quoted under NASA media usage guidelines"
+    }
+  ]
+}

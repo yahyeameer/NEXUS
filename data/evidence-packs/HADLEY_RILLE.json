@@ -1,0 +1,101 @@
+{
+  "siteId": "HADLEY_RILLE",
+  "version": 1,
+  "items": [
+    {
+      "id": "EV-HADLEY_RILLE-001",
+      "siteId": "HADLEY_RILLE",
+      "type": "dataset",
+      "title": "LROC NAC digital terrain model, Apollo 15 landing site (2 m/post)",
+      "spokenLabel": "the LROC terrain model",
+      "dataset": "LRO LROC NAC DTM",
+      "productId": "NAC_DTM_APOLLO15_E261N0036",
+      "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_E261N0036.IMG",
+      "acquiredAt": "2009-10-30",
+      "region": {
+        "featureId": "HADLEY_RILLE",
+        "bbox": [
+          -356.47091,
+          26.04478,
+          -356.36817,
+          26.13712
+        ],
+        "crs": "planetocentric longitude/latitude, degrees (west, south, east, north)"
+      },
+      "credit": "NASA/GSFC/Arizona State University",
+      "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+    },
+    {
+      "id": "EV-HADLEY_RILLE-002",
+      "siteId": "HADLEY_RILLE",
+      "type": "image",
+      "title": "LROC NAC orthophoto M111578606, Apollo 15 landing site (2 m/pixel)",
+      "spokenLabel": "the LROC orthophoto",
+      "dataset": "LRO LROC NAC orthophoto",
+      "productId": "NAC_DTM_APOLLO15_M111578606_2M",
+      "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_M111578606_2M.IMG",
+      "acquiredAt": "2009-10-30T21:48:58Z",
+      "region": {
+        "featureId": "HADLEY_RILLE",
+        "bbox": [
+          -356.47091,
+          26.04478,
+          -356.36817,
+          26.13712
+        ],
+        "crs": "planetocentric longitude/latitude, degrees (west, south, east, north)"
+      },
+      "credit": "NASA/GSFC/Arizona State University",
+      "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+    },
+    {
+      "id": "EV-HADLEY_RILLE-003",
+      "siteId": "HADLEY_RILLE",
+      "type": "text",
+      "title": "LROC NAC DTM README: accuracy of the Apollo 15 terrain model",
+      "spokenLabel": "the terrain model notes",
+      "dataset": "LRO LROC NAC DTM",
+      "productId": "NAC_DTM_APOLLO15_E261N0036",
+      "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_README.TXT",
+      "excerpt": "Products are tied to LOLA elevations with RMS error of 1.74 m to 7.0 different LOLA orbit tracks.",
+      "credit": "NASA/GSFC/Arizona State University",
+      "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+    },
+    {
+      "id": "EV-HADLEY_RILLE-004",
+      "siteId": "HADLEY_RILLE",
+      "type": "text",
+      "title": "USGS Gazetteer of Planetary Nomenclature: Rima Hadley (length 116.09 km, centre 25.72 N 3.15 E)",
+      "spokenLabel": "the planetary names gazetteer",
+      "sourceUrl": "https://planetarynames.wr.usgs.gov/Feature/5064",
+      "excerpt": "Named from nearby Mountain (Mons Hadley).",
+      "region": {
+        "featureId": "HADLEY_RILLE"
+      },
+      "credit": "USGS Astrogeology Science Center / IAU WGPSN",
+      "license": "Public domain: U.S. Government work (USGS Gazetteer of Planetary Nomenclature)"
+    },
+    {
+      "id": "EV-HADLEY_RILLE-005",
+      "siteId": "HADLEY_RILLE",
+      "type": "text",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1971-063C",
+      "title": "NSSDCA: Apollo 15 Lunar Module record, first EVA traverse",
+      "spokenLabel": "the Apollo 15 mission record",
+      "excerpt": "The traverse on the first EVA covered 10.3 km to the edge of Hadley Rille to Elbow Crater and near St. George Crater and back to the LM, where a core sample was taken from three meters below the surface.",
+      "credit": "NASA Space Science Data Coordinated Archive",
+      "license": "NASA web content; quoted under NASA media usage guidelines"
+    },
+    {
+      "id": "EV-HADLEY_RILLE-006",
+      "siteId": "HADLEY_RILLE",
+      "type": "text",
+      "title": "NSSDCA: Apollo 15 mission summary, landing site",
+      "spokenLabel": "the Apollo 15 mission summary",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/lunar/apollo15info.html",
+      "excerpt": "Landing Site: Hadley Rille/Apennines (26.13 N, 3.63 E)",
+      "credit": "NASA Space Science Data Coordinated Archive",
+      "license": "NASA web content; quoted under NASA media usage guidelines"
+    }
+  ]
+}

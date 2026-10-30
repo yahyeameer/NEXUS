@@ -1,0 +1,90 @@
+{
+  "siteId": "ELBOW_CRATER",
+  "version": 1,
+  "items": [
+    {
+      "id": "EV-ELBOW_CRATER-001",
+      "siteId": "ELBOW_CRATER",
+      "type": "dataset",
+      "title": "LROC NAC digital terrain model, Apollo 15 landing site (2 m/post)",
+      "spokenLabel": "the LROC terrain model",
+      "dataset": "LRO LROC NAC DTM",
+      "productId": "NAC_DTM_APOLLO15_E261N0036",
+      "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_E261N0036.IMG",
+      "acquiredAt": "2009-10-30",
+      "region": {
+        "featureId": "ELBOW_CRATER",
+        "bbox": [
+          -356.43664,
+          25.99703,
+          -356.36326,
+          26.06298
+        ],
+        "crs": "planetocentric longitude/latitude, degrees (west, south, east, north)"
+      },
+      "credit": "NASA/GSFC/Arizona State University",
+      "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+    },
+    {
+      "id": "EV-ELBOW_CRATER-002",
+      "siteId": "ELBOW_CRATER",
+      "type": "image",
+      "title": "LROC NAC orthophoto M111578606, Apollo 15 landing site (2 m/pixel)",
+      "spokenLabel": "the LROC orthophoto",
+      "dataset": "LRO LROC NAC orthophoto",
+      "productId": "NAC_DTM_APOLLO15_M111578606_2M",
+      "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_M111578606_2M.IMG",
+      "acquiredAt": "2009-10-30T21:48:58Z",
+      "region": {
+        "featureId": "ELBOW_CRATER",
+        "bbox": [
+          -356.43664,
+          25.99703,
+          -356.36326,
+          26.06298
+        ],
+        "crs": "planetocentric longitude/latitude, degrees (west, south, east, north)"
+      },
+      "credit": "NASA/GSFC/Arizona State University",
+      "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+    },
+    {
+      "id": "EV-ELBOW_CRATER-003",
+      "siteId": "ELBOW_CRATER",
+      "type": "text",
+      "title": "LROC NAC DTM README: accuracy of the Apollo 15 terrain model",
+      "spokenLabel": "the terrain model notes",
+      "dataset": "LRO LROC NAC DTM",
+      "productId": "NAC_DTM_APOLLO15_E261N0036",
+      "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_README.TXT",
+      "excerpt": "Products are tied to LOLA elevations with RMS error of 1.74 m to 7.0 different LOLA orbit tracks.",
+      "credit": "NASA/GSFC/Arizona State University",
+      "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+    },
+    {
+      "id": "EV-ELBOW_CRATER-004",
+      "siteId": "ELBOW_CRATER",
+      "type": "text",
+      "title": "USGS Gazetteer of Planetary Nomenclature: Elbow (diameter 0.34 km, centre 26.03 N 3.60 E)",
+      "spokenLabel": "the planetary names gazetteer",
+      "sourceUrl": "https://planetarynames.wr.usgs.gov/Feature/1759",
+      "excerpt": "Astronaut-named feature, Apollo 15 site.",
+      "region": {
+        "featureId": "ELBOW_CRATER"
+      },
+      "credit": "USGS Astrogeology Science Center / IAU WGPSN",
+      "license": "Public domain: U.S. Government work (USGS Gazetteer of Planetary Nomenclature)"
+    },
+    {
+      "id": "EV-ELBOW_CRATER-005",
+      "siteId": "ELBOW_CRATER",
+      "type": "text",
+      "sourceUrl": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1971-063C",
+      "title": "NSSDCA: Apollo 15 Lunar Module record, first EVA traverse",
+      "spokenLabel": "the Apollo 15 mission record",
+      "excerpt": "The traverse on the first EVA covered 10.3 km to the edge of Hadley Rille to Elbow Crater and near St. George Crater and back to the LM, where a core sample was taken from three meters below the surface.",
+      "credit": "NASA Space Science Data Coordinated Archive",
+      "license": "NASA web content; quoted under NASA media usage guidelines"
+    }
+  ]
+}

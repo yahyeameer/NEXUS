@@ -1,0 +1,76 @@
+{
+  "siteId": "HADLEY_RILLE",
+  "features": [
+    {
+      "id": "HADLEY_RILLE",
+      "siteId": "HADLEY_RILLE",
+      "kind": "rille",
+      "label": "Rima Hadley (Hadley Rille)",
+      "spokenLabel": "Hadley Rille",
+      "aliases": [
+        "the rille",
+        "rille",
+        "the channel",
+        "rima hadley"
+      ],
+      "path": [
+        {
+          "x": 236.0,
+          "z": 520.0
+        },
+        {
+          "x": 466.0,
+          "z": 822.0
+        },
+        {
+          "x": 696.0,
+          "z": 1126.0
+        },
+        {
+          "x": 852.0,
+          "z": 1428.0
+        },
+        {
+          "x": 1082.0,
+          "z": 1732.0
+        },
+        {
+          "x": 1292.0,
+          "z": 2036.0
+        }
+      ],
+      "crossSections": [
+        [
+          {
+            "x": 80.6,
+            "z": 1554.7
+          },
+          {
+            "x": 1680.7,
+            "z": 440.1
+          }
+        ],
+        [
+          {
+            "x": 236.6,
+            "z": 1856.7
+          },
+          {
+            "x": 1836.7,
+            "z": 742.1
+          }
+        ],
+        [
+          {
+            "x": 466.6,
+            "z": 2160.7
+          },
+          {
+            "x": 2066.7,
+            "z": 1046.1
+          }
+        ]
+      ]
+    }
+  ]
+}

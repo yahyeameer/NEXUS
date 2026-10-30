@@ -1,0 +1,9 @@
+{
+  "siteId": "HADLEY_DELTA",
+  "width": 751,
+  "height": 751,
+  "cellSizeM": 4.0,
+  "noData": -32768.0,
+  "coordinateReferenceSystem": "Moon sphere R=1737.4 km, planetocentric, equirectangular (center lat 26 N, center lon 180), from NAC_DTM_APOLLO15_E261N0036 label",
+  "sourceEvidenceId": "EV-HADLEY_DELTA-001"
+}
