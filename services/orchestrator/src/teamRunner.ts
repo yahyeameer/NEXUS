@@ -2,12 +2,13 @@
 // CommandRunner bridges to a local command that drives docker-agent; PrecomputedRunner replays stored,
 // curated outputs for the judged demo (AGENTS.md §6 demo safety). Both feed the same SIE path.
 import { spawn } from "node:child_process";
-import { readFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { z } from "zod";
-import type { FieldNote, Observation, Result } from "@nexus/schemas";
+import type { AgentRunContext, FieldNote, Observation, Result } from "@nexus/schemas";
 
 export interface TeamTask {
+  runId: string;
   observation: Observation;
   fieldNotes: FieldNote[];
   /** Specialists chosen by Jev or the fallback policy; the runner must not add others. */
@@ -28,7 +29,8 @@ export interface TeamRunner {
 }
 
 /**
- * Runs `command` (no shell) with the task as JSON on stdin and expects JSON on stdout:
+ * Writes the run context the NEXUS tool server reads (`$NEXUS_RUN_DIR/context.json`, services/orchestrator/src/mcp),
+ * then runs `command` (no shell) with NEXUS_RUN_DIR set, the task as JSON on stdin, and expects JSON on stdout:
  * `{ "mode": "run", ... }` → TeamResult; `{ "mode": "rerun", "agentId", "issues", ... }` → `{ "output": … }`.
  * The command is configured from the backend environment so docker-agent flags are checked against the
  * installed version rather than hard-coded here (AGENTS.md §8).
@@ -38,25 +40,46 @@ export class CommandRunner implements TeamRunner {
     private readonly command: string,
     private readonly args: readonly string[],
     private readonly cwd: string,
+    /** Parent of per-run directories; each run gets `<runsDir>/<runId>`. */
+    private readonly runsDir: string = join(cwd, ".nexus-run"),
   ) {}
 
   async run(task: TeamTask): Promise<Result<TeamResult>> {
-    const out = await this.exec({ mode: "run", ...payload(task) }, task.signal);
+    const out = await this.exec({ mode: "run", ...payload(task) }, task);
     if (!out.ok) return out;
     const parsed = teamResult.safeParse(out.value);
     return parsed.success ? { ok: true, value: parsed.data } : { ok: false, error: "team output is not a TeamResult" };
   }
 
   async rerun(task: TeamTask, agentId: string, issues: readonly string[]): Promise<Result<unknown>> {
-    const out = await this.exec({ mode: "rerun", agentId, issues, ...payload(task) }, task.signal);
+    const out = await this.exec({ mode: "rerun", agentId, issues, ...payload(task) }, task);
     if (!out.ok) return out;
     const parsed = z.object({ output: z.unknown() }).safeParse(out.value);
     return parsed.success ? { ok: true, value: parsed.data.output } : { ok: false, error: "rerun output missing" };
   }
 
-  private exec(input: unknown, signal: AbortSignal): Promise<Result<unknown>> {
+  private async exec(input: unknown, task: TeamTask): Promise<Result<unknown>> {
+    if (!/^[A-Za-z0-9_-]+$/.test(task.runId)) return { ok: false, error: "invalid run id" };
+    const runDir = join(this.runsDir, task.runId);
+    const context: AgentRunContext = {
+      runId: task.runId,
+      observation: task.observation,
+      fieldNote: task.fieldNotes[0],
+      allowedAgentIds: task.agentIds,
+    };
+    try {
+      await mkdir(runDir, { recursive: true });
+      await writeFile(join(runDir, "context.json"), JSON.stringify(context));
+    } catch {
+      return { ok: false, error: "could not write run context" };
+    }
     return new Promise((resolve) => {
-      const child = spawn(this.command, this.args, { cwd: this.cwd, signal, stdio: ["pipe", "pipe", "pipe"] });
+      const child = spawn(this.command, this.args, {
+        cwd: this.cwd,
+        signal: task.signal,
+        env: { ...process.env, NEXUS_RUN_DIR: runDir },
+        stdio: ["pipe", "pipe", "pipe"],
+      });
       let stdout = "";
       child.stdout.on("data", (d: Buffer) => {
         stdout += d.toString();
@@ -78,7 +101,7 @@ export class CommandRunner implements TeamRunner {
 }
 
 function payload(task: TeamTask) {
-  return { observation: task.observation, fieldNotes: task.fieldNotes, agentIds: task.agentIds };
+  return { runId: task.runId, observation: task.observation, fieldNotes: task.fieldNotes, agentIds: task.agentIds };
 }
 
 /**

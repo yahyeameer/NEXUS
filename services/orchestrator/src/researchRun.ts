@@ -53,7 +53,7 @@ export async function runResearch(observationId: string, sessionId: string, deps
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), deps.timeoutMs ?? TEAM_TIMEOUT_MS);
-  const task: TeamTask = { observation: obs.value, fieldNotes, agentIds, signal: controller.signal };
+  const task: TeamTask = { runId: `RUN-${randomUUID()}`, observation: obs.value, fieldNotes, agentIds, signal: controller.signal };
   try {
     const taskIds = new Map(agentIds.map((a) => [a, `TASK-${randomUUID()}`]));
     for (const agentId of agentIds) await api.emit("agent.task.dispatched", sessionId, observationId, { agentId, taskId: taskIds.get(agentId) });

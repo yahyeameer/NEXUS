@@ -90,6 +90,9 @@ importers:
       '@nexus/sie':
         specifier: workspace:*
         version: link:../../packages/sie
+      '@nexus/terrain':
+        specifier: workspace:*
+        version: link:../../packages/terrain
       '@nexus/voice':
         specifier: workspace:*
         version: link:../../packages/voice

@@ -14,7 +14,9 @@ which runs the SIE. It never writes to the database and never sets a review stat
 
 `NEXUS_MODE=precomputed` (default) replays `data/precomputed/<SITE_ID>/<FEATURE_ID>.json`.
 
-`NEXUS_MODE=live` runs `NEXUS_TEAM_CMD` (no shell) from the repo root. It receives JSON on stdin and prints JSON on stdout:
+`NEXUS_MODE=live` runs `NEXUS_TEAM_CMD` (no shell) from the repo root. Before each call the runner writes
+`.nexus-run/<runId>/context.json` (`AgentRunContext`) and sets `NEXUS_RUN_DIR` to that folder, which is what the
+NEXUS tool server (`src/mcp`, started by `agents/nexus.yaml`) reads. The command receives JSON on stdin and prints JSON on stdout:
 
 | stdin | stdout |
 | --- | --- |

@@ -15,6 +15,7 @@
     "@fastify/websocket": "^11.3.4",
     "@nexus/schemas": "workspace:*",
     "@nexus/sie": "workspace:*",
+    "@nexus/terrain": "workspace:*",
     "@nexus/voice": "workspace:*",
     "fastify": "^5.6.0",
     "pg": "^8.23.1",

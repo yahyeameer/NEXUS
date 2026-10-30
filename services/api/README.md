@@ -17,4 +17,4 @@ Runs in memory without `DATABASE_URL` (precomputed demo), Postgres with it (`src
 | `POST /events` | services (own events) · human (XR playback events) | `speech.playback.started` refused unless the script was approved |
 | `WS /events` | any | First message `{ "type": "auth", "token", "after"? }`, then the session's events |
 
-Env: `NEXUS_PAIRING_CODE`, `ORCHESTRATOR_TOKEN`, `VOICE_GATEWAY_TOKEN`, `XR_ORIGIN` (CORS), `DATABASE_URL`, `NEXUS_DATA_DIR`.
+Env: `NEXUS_PAIRING_CODE`, `ORCHESTRATOR_TOKEN`, `VOICE_GATEWAY_TOKEN`, `XR_ORIGIN` (CORS), `DATABASE_URL`, `NEXUS_DATA_DIR`. Measurements are computed from each site's DEM at startup with packages/terrain.

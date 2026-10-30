@@ -175,6 +175,7 @@ describe("PrecomputedRunner", () => {
 
     const missing = await new PrecomputedRunner(dir).run({
       observation: { id: "OBS-1", siteId: "TEST_SITE", source: "hand_select", featureId: "../../etc", spatialAnchor: {}, createdBy: "x", createdAt: "2026-10-30T12:00:00Z" },
+      runId: "RUN-test",
       fieldNotes: [],
       agentIds: [],
       signal: new AbortController().signal,
@@ -184,22 +185,26 @@ describe("PrecomputedRunner", () => {
 });
 
 describe("CommandRunner", () => {
-  it("passes the task on stdin and parses JSON from stdout", async () => {
-    const script = "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const t=JSON.parse(s);console.log(JSON.stringify({outputs:[{agentId:t.agentIds[0],output:{seen:t.mode}}],synthesis:null}))})";
-    const r = new CommandRunner(process.execPath, ["-e", script], process.cwd());
+  it("writes the run context for the tool server, passes the task on stdin and parses stdout", async () => {
+    // The child echoes the mode and the runId it reads back from $NEXUS_RUN_DIR/context.json.
+    const script =
+      "const fs=require('fs');let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{const t=JSON.parse(s);const c=JSON.parse(fs.readFileSync(process.env.NEXUS_RUN_DIR+'/context.json','utf8'));console.log(JSON.stringify({outputs:[{agentId:t.agentIds[0],output:{seen:t.mode,runId:c.runId}}],synthesis:null}))})";
+    const r = new CommandRunner(process.execPath, ["-e", script], process.cwd(), await mkdtemp(join(tmpdir(), "nexus-run-")));
     const res = await r.run({
       observation: { id: "OBS-1", siteId: "S", source: "hand_select", spatialAnchor: {}, createdBy: "x", createdAt: "2026-10-30T12:00:00Z" },
+      runId: "RUN-test",
       fieldNotes: [],
       agentIds: ["26_lola_elevation_researcher"],
       signal: new AbortController().signal,
     });
-    expect(res).toEqual({ ok: true, value: { outputs: [{ agentId: "26_lola_elevation_researcher", output: { seen: "run" } }], synthesis: null } });
+    expect(res).toEqual({ ok: true, value: { outputs: [{ agentId: "26_lola_elevation_researcher", output: { seen: "run", runId: "RUN-test" } }], synthesis: null } });
   });
 
   it("reports a non-zero exit without leaking stderr", async () => {
     const r = new CommandRunner(process.execPath, ["-e", "console.error('secret'); process.exit(3)"], process.cwd());
     const res = await r.run({
       observation: { id: "OBS-1", siteId: "S", source: "hand_select", spatialAnchor: {}, createdBy: "x", createdAt: "2026-10-30T12:00:00Z" },
+      runId: "RUN-test",
       fieldNotes: [],
       agentIds: [],
       signal: new AbortController().signal,

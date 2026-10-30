@@ -1,10 +1,11 @@
 // Loads curated evidence packs and code-computed measurements: the only things the SIE accepts as evidence.
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { evidencePack, measurementRecord } from "@nexus/schemas";
+import { evidencePack, featureCollection } from "@nexus/schemas";
 import type { EvidenceItem, MeasurementRecord } from "@nexus/schemas";
 import { createContext } from "@nexus/sie";
 import type { SieContext } from "@nexus/sie";
+import { measureFeature, parseDem } from "@nexus/terrain";
 
 export interface EvidenceStore {
   items: EvidenceItem[];
@@ -26,8 +27,10 @@ export function evidenceStore(items: EvidenceItem[], measurements: MeasurementRe
 }
 
 /**
- * `data/evidence-packs/*.json` and `data/terrain/<site>/measurements.json`. Invalid files fail startup
- * rather than being skipped, so a broken pack can never silently weaken the SIE.
+ * `data/evidence-packs/*.json`, plus MeasurementRecords computed by packages/terrain from each site's
+ * `dem.json` + `dem.bin` + `features.json`, exactly as the agent tool server does
+ * (services/orchestrator/src/mcp/dataStore.ts), so agents and the SIE see the same ids and values.
+ * Invalid files fail startup rather than being skipped, so a broken pack can never silently weaken the SIE.
  */
 export async function loadEvidenceStore(dataDir: string): Promise<EvidenceStore> {
   const items: EvidenceItem[] = [];
@@ -37,12 +40,25 @@ export async function loadEvidenceStore(dataDir: string): Promise<EvidenceStore>
     items.push(...pack.items);
   }
   const terrainDir = join(dataDir, "terrain");
-  for (const site of await listDirs(terrainDir)) {
-    const file = join(terrainDir, site, "measurements.json");
-    const raw = await readFile(file, "utf8").catch(() => undefined);
-    if (raw !== undefined) measurements.push(...measurementRecord.array().parse(JSON.parse(raw)));
-  }
+  for (const site of await listDirs(terrainDir)) measurements.push(...(await siteMeasurements(join(terrainDir, site))));
   return evidenceStore(items, measurements);
+}
+
+async function siteMeasurements(dir: string): Promise<MeasurementRecord[]> {
+  const featuresRaw = await readFile(join(dir, "features.json"), "utf8").catch(() => undefined);
+  const headerRaw = await readFile(join(dir, "dem.json"), "utf8").catch(() => undefined);
+  const bytes = await readFile(join(dir, "dem.bin")).catch(() => undefined);
+  if (featuresRaw === undefined || headerRaw === undefined || bytes === undefined) return [];
+  const features = featureCollection.parse(JSON.parse(featuresRaw)).features;
+  const grid = parseDem(JSON.parse(headerRaw), bytes);
+  if (!grid.ok) throw new Error(`${dir}: ${grid.error}`);
+  // The DEM's timestamp keeps records identical to the tool server's.
+  const computedAt = (await stat(join(dir, "dem.bin"))).mtime.toISOString();
+  return features.flatMap((f) => {
+    const r = measureFeature(grid.value, f, computedAt);
+    if (!r.ok) throw new Error(`${f.id}: ${r.error}`);
+    return r.value;
+  });
 }
 
 async function listJson(dir: string): Promise<string[]> {
