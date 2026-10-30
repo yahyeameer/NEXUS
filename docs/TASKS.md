@@ -35,10 +35,10 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 
 ## Phase 4 — Integrity + voice policy (Nov 6 – Nov 10)
 
-- [ ] Validators V1–V9 + tests
-- [ ] Voice validators VV1–VV3 + rewrite loop
-- [ ] Jev decision questions wired (or fallback)
-- [ ] Red-team suite green in CI
+- [x] Validators V1–V9 + tests
+- [ ] Voice validators VV1–VV3 + rewrite loop (validators + REWRITE → SILENT decision done; rewrite call lands with voice-gateway)
+- [x] Jev decision questions wired (or fallback)
+- [x] Red-team suite green in CI
 - [ ] Escalation + "Removed: no evidence" list
 
 ## Phase 5 — Spatial findings + voices (Nov 9 – Nov 13)
