@@ -96,9 +96,11 @@ Legend — **MVP**: ✅ built for the competition · ⏳ should-have · — late
 | 55 | Debate Moderator | Run Evidence Debate turns | Declare a winner | ⏳ | voice |
 | 56 | Review Rationale Recorder | Store spoken decisions verbatim | Paraphrase the user | ✅ | code |
 
-## MVP research team (Docker Agent)
+## Research team (Docker Agent, 20 agents)
 
-`observation_coordinator` → (`lola_elevation_researcher`, `lroc_imagery_researcher`) in parallel → (`lunar_geology_researcher`, `hypothesis_generator`, `alternative_explanation_researcher`) → `uncertainty_analyst` → `research_synthesis_specialist` → SIE.
+`observation_coordinator` → phase 1 (`lola_elevation_researcher`, `lroc_imagery_researcher`, `lunar_image_analyst`, `video_frame_analyst`, `visual_comparison_researcher`) → phase 2 (`lunar_geology_researcher`, `impact_crater_researcher`, `lunar_volcanism_researcher`, `historical_observation_researcher`) → phase 3 (`hypothesis_generator`, `alternative_explanation_researcher`) → phase 4 (`contradiction_detection_agent`, `research_gap_detector`, `uncertainty_analyst`) → `research_synthesis_specialist` → phase 6 (`claim_classification_agent`, `finding_consistency_auditor`) → phase 7 (`followup_investigation_planner`, `human_review_escalation_agent`) → SIE.
+
+Conditional agents run only when needed; see `agents/README.md` for the conditions and tools. All 20 have read-only web search, but cite only evidence-store IDs.
 
 See `agents/nexus.yaml` and `agents/prompts/`.
 
