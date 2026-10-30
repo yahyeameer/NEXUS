@@ -6,3 +6,4 @@ export * from "./agentOutput.js";
 export * from "./finding.js";
 export * from "./voiceUtterance.js";
 export * from "./events.js";
+export * from "./agentTools.js";
