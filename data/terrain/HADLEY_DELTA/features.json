@@ -1,0 +1,23 @@
+{
+  "siteId": "HADLEY_DELTA",
+  "features": [
+    {
+      "id": "HADLEY_DELTA_SLOPE",
+      "siteId": "HADLEY_DELTA",
+      "kind": "slope",
+      "label": "Mons Hadley Delta, north-west flank",
+      "spokenLabel": "the Hadley Delta slope",
+      "aliases": [
+        "the slope",
+        "hadley delta",
+        "the mountain",
+        "delta"
+      ],
+      "center": {
+        "x": 1499.7,
+        "z": 1500.7
+      },
+      "radiusM": 500
+    }
+  ]
+}

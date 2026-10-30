@@ -11,11 +11,17 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@iwer/devui": "2.7.0",
     "@nexus/schemas": "workspace:*",
-    "@nexus/voice": "workspace:*"
+    "@nexus/terrain": "workspace:*",
+    "@nexus/voice": "workspace:*",
+    "iwer": "2.7.0",
+    "three": "0.184.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@playwright/test": "^1.55.0",
+    "@types/three": "0.184.0",
     "@vitejs/plugin-basic-ssl": "^2.1.0",
     "vite": "^6.3.5"
   }

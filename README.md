@@ -26,7 +26,7 @@ docker compose -f infra/docker-compose.yml up -d
 pnpm dev
 ```
 
-Open the printed HTTPS URL in **Meta Quest Browser** (same network), or use the IWER emulator in a desktop browser with `pnpm dev:xr`.
+Open the printed HTTPS URL in **Meta Quest Browser** (same network), or use the IWER emulator in a desktop browser with `pnpm dev:xr`, which needs no headset and no database (see `apps/xr/README.md`).
 
 ## Repository
 

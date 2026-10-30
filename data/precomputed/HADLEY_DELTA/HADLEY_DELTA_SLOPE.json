@@ -1,0 +1,97 @@
+{
+  "outputs": [
+    {
+      "agentId": "26_lola_elevation_researcher",
+      "output": {
+        "agentId": "26_lola_elevation_researcher",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [
+          {
+            "text": "The LROC terrain model gives a mean slope of about 18.6 degrees across the labelled area.",
+            "claimType": "measurement",
+            "evidenceIds": [
+              "EV-HADLEY_DELTA-001"
+            ],
+            "measurementIds": [
+              "MEAS-HADLEY_DELTA-HADLEY_DELTA_SLOPE-SLOPE"
+            ]
+          }
+        ],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run."
+      }
+    },
+    {
+      "agentId": "25_lroc_imagery_researcher",
+      "output": {
+        "agentId": "25_lroc_imagery_researcher",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [
+          {
+            "text": "The orthophoto shows a textured slope surface dotted with small craters.",
+            "claimType": "observation",
+            "evidenceIds": [
+              "EV-HADLEY_DELTA-002"
+            ]
+          }
+        ],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run."
+      }
+    },
+    {
+      "agentId": "20_historical_observation_researcher",
+      "output": {
+        "agentId": "20_historical_observation_researcher",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [
+          {
+            "text": "A NASA Apollo 15 photo caption describes Hadley Delta rising above the plain beyond the landing site.",
+            "claimType": "observation",
+            "evidenceIds": [
+              "EV-HADLEY_DELTA-005"
+            ]
+          }
+        ],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run."
+      }
+    },
+    {
+      "agentId": "37_uncertainty_analyst",
+      "output": {
+        "agentId": "37_uncertainty_analyst",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run.",
+        "uncertainty": {
+          "level": "medium",
+          "explanation": "A mean over the labelled area hides steeper and gentler patches."
+        }
+      }
+    }
+  ],
+  "synthesis": {
+    "findingDraft": {
+      "title": "Hadley Delta: slope of the north-west flank",
+      "summary": "The LROC terrain model gives a mean slope of about 18.6 degrees across the labelled area. The orthophoto shows a textured slope surface dotted with small craters.",
+      "claimType": "measurement",
+      "possibleInterpretations": [],
+      "uncertainty": {
+        "level": "medium",
+        "explanation": "A mean over the labelled area hides steeper and gentler patches."
+      }
+    },
+    "spokenBriefingDraft": {
+      "script": "I investigated the Hadley Delta slope. The LROC terrain model gives about 18.6 degrees of mean slope. The image shows a textured slope surface dotted with small craters. Overall uncertainty is medium.",
+      "sentenceEvidence": [
+        [],
+        [
+          "MEAS-HADLEY_DELTA-HADLEY_DELTA_SLOPE-SLOPE"
+        ],
+        [
+          "EV-HADLEY_DELTA-002"
+        ],
+        []
+      ],
+      "speakerAgentId": "26_lola_elevation_researcher"
+    }
+  }
+}

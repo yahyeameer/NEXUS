@@ -18,9 +18,11 @@
     "@nexus/sie": "workspace:*",
     "@nexus/terrain": "workspace:*",
     "fastify": "^5.6.0",
+    "ws": "^8.22.0",
     "zod": "^3.25.0"
   },
   "devDependencies": {
+    "@types/ws": "^8.18.2",
     "tsx": "^4.20.0"
   }
 }

@@ -1,0 +1,68 @@
+:root {
+  color-scheme: dark;
+  --bg: #101216;
+  --fg: #f4f1ea;
+  --muted: #a9a59b;
+  --accent: #3d7be0;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: system-ui, sans-serif;
+}
+#app canvas {
+  display: block;
+}
+.hud {
+  position: fixed;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  z-index: 10;
+}
+#enter {
+  font: inherit;
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: 0;
+  background: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+#enter:disabled {
+  opacity: 0.5;
+}
+#status {
+  color: var(--muted);
+  font-size: 14px;
+}
+.sim-speech {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 10;
+  display: grid;
+  gap: 4px;
+  width: min(360px, calc(100vw - 24px));
+  padding: 10px;
+  border-radius: 8px;
+  background: rgba(20, 22, 27, 0.92);
+  font-size: 13px;
+}
+.sim-speech span,
+.sim-speech small {
+  color: var(--muted);
+}
+.sim-speech input {
+  font: inherit;
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid #3a3f48;
+  background: #1b1e24;
+  color: var(--fg);
+}

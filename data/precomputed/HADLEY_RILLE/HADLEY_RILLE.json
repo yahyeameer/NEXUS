@@ -1,0 +1,117 @@
+{
+  "outputs": [
+    {
+      "agentId": "26_lola_elevation_researcher",
+      "output": {
+        "agentId": "26_lola_elevation_researcher",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [
+          {
+            "text": "The LROC terrain model gives a rille depth of about 308 m along this reach.",
+            "claimType": "measurement",
+            "evidenceIds": [
+              "EV-HADLEY_RILLE-001"
+            ],
+            "measurementIds": [
+              "MEAS-HADLEY_RILLE-HADLEY_RILLE-DEPTH"
+            ]
+          },
+          {
+            "text": "The LROC terrain model gives about 1610 m between the two rim crests.",
+            "claimType": "measurement",
+            "evidenceIds": [
+              "EV-HADLEY_RILLE-001"
+            ],
+            "measurementIds": [
+              "MEAS-HADLEY_RILLE-HADLEY_RILLE-WIDTH"
+            ]
+          },
+          {
+            "text": "The labelled reach of the rille is about 1.85 km long.",
+            "claimType": "measurement",
+            "evidenceIds": [
+              "EV-HADLEY_RILLE-001"
+            ],
+            "measurementIds": [
+              "MEAS-HADLEY_RILLE-HADLEY_RILLE-LENGTH"
+            ]
+          }
+        ],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run."
+      }
+    },
+    {
+      "agentId": "25_lroc_imagery_researcher",
+      "output": {
+        "agentId": "25_lroc_imagery_researcher",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [
+          {
+            "text": "The orthophoto shows a curving channel crossing the cratered mare plain, with one wall brightly lit and the other in shade.",
+            "claimType": "observation",
+            "evidenceIds": [
+              "EV-HADLEY_RILLE-002"
+            ]
+          }
+        ],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run."
+      }
+    },
+    {
+      "agentId": "20_historical_observation_researcher",
+      "output": {
+        "agentId": "20_historical_observation_researcher",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [
+          {
+            "text": "On the first Apollo 15 moonwalk the crew's traverse reached the edge of Hadley Rille.",
+            "claimType": "observation",
+            "evidenceIds": [
+              "EV-HADLEY_RILLE-005"
+            ]
+          }
+        ],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run."
+      }
+    },
+    {
+      "agentId": "37_uncertainty_analyst",
+      "output": {
+        "agentId": "37_uncertainty_analyst",
+        "observationId": "OBS-TEMPLATE",
+        "claims": [],
+        "notes": "Curated demo output written from this site's evidence pack and code-computed measurements; not a recorded model run.",
+        "uncertainty": {
+          "level": "low",
+          "explanation": "Values come from one LROC terrain model tied to LOLA elevations; the width depends on where the rim-crest method finds each crest."
+        }
+      }
+    }
+  ],
+  "synthesis": {
+    "findingDraft": {
+      "title": "Hadley Rille: depth and width from the LROC terrain model",
+      "summary": "The LROC terrain model gives a rille depth of about 308 m and about 1610 m between the rim crests along this reach. The orthophoto shows a curving channel with one wall lit and the other in shade.",
+      "claimType": "measurement",
+      "possibleInterpretations": [],
+      "uncertainty": {
+        "level": "low",
+        "explanation": "Values come from one LROC terrain model tied to LOLA elevations; the width depends on where the rim-crest method finds each crest."
+      }
+    },
+    "spokenBriefingDraft": {
+      "script": "I investigated Hadley Rille. The LROC terrain model gives about 308 metres of depth along this reach. The LROC terrain model gives about 1610 metres between the rim crests. Overall uncertainty is low.",
+      "sentenceEvidence": [
+        [],
+        [
+          "MEAS-HADLEY_RILLE-HADLEY_RILLE-DEPTH"
+        ],
+        [
+          "MEAS-HADLEY_RILLE-HADLEY_RILLE-WIDTH"
+        ],
+        []
+      ],
+      "speakerAgentId": "26_lola_elevation_researcher"
+    }
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "siteId": "ELBOW_CRATER",
+  "features": [
+    {
+      "id": "ELBOW_CRATER",
+      "siteId": "ELBOW_CRATER",
+      "kind": "crater",
+      "label": "Elbow",
+      "spokenLabel": "Elbow crater",
+      "aliases": [
+        "elbow",
+        "the crater",
+        "crater"
+      ],
+      "center": {
+        "x": 1000.6,
+        "z": 1000.2
+      },
+      "rimRadiusM": 170
+    }
+  ]
+}

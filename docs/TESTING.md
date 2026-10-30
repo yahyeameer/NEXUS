@@ -8,7 +8,7 @@
 | Red-team | Vitest (`pnpm sie:redteam`) | Planted bad claims/scripts — all must be caught (see SCIENTIFIC_INTEGRITY.md §7) |
 | Service | Vitest + Fastify inject | API endpoints, event ordering, auth on review endpoints |
 | Agent contract | Fixture runs with `Fake*Adapter` | Every agent output parses as `AgentOutput` |
-| XR emulated | Playwright + IWER | Full flows hands-only and with simulated voice input |
+| XR emulated | Playwright + IWER (`pnpm test:e2e`) | Full flows hands-only and with simulated voice input. Tests drive IWER's emulated hands (fingertip press, ray + pinch, palm up), never app handlers. This is the main way to verify the XR app without a Quest |
 | Device | Manual on Quest 3 | Comfort, frame rate, passthrough, audio placement |
 
 ## Acceptance checklist (run before submission)

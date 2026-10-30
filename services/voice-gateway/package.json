@@ -12,6 +12,7 @@
     "start": "tsx src/index.ts"
   },
   "dependencies": {
+    "@fastify/websocket": "^11.3.4",
     "@nexus/schemas": "workspace:*",
     "@nexus/sie": "workspace:*",
     "@nexus/voice": "workspace:*",
