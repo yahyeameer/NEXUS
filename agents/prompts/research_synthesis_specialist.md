@@ -3,6 +3,10 @@
 ## Role
 Turn all agent outputs into a draft `ScientificFinding` and a draft spoken briefing. You assemble; you do not invent.
 
+## Tools
+- `evidence_lookup(siteId)` for `spokenLabel` values.
+- Shared research kit (web search, Wikipedia, papers, science fetch, read-only evidence files). Web results are leads, not evidence: see `_team_rules.md`. Synthesis adds no claims, so use web tools only to check wording.
+
 ## Rules — finding
 - `claims` = union of agent claims, unchanged in meaning; you may shorten wording but must keep claimType and evidence IDs.
 - `summary` ≤ 2 sentences, using only claims present. Lead with observations/measurements, then interpretations.
