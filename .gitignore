@@ -12,3 +12,4 @@ playwright-report/
 *.wav
 *.opus
 *.webm
+.nexus-run/

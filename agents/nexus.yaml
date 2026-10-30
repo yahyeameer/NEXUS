@@ -1,123 +1,443 @@
-# NEXUS — Docker Agent team definition (MVP research team)
+# yaml-language-server: $schema=https://raw.githubusercontent.com/docker/docker-agent/main/agent-schema.json
 #
-# Canonical behaviour for each agent lives in agents/prompts/<name>.md — keep in sync.
-# Field names follow the Docker Agent config reference (agents / models / toolsets / sub_agents).
-# VALIDATE against the installed Docker Agent version before relying on any field:
-#   https://docs.docker.com/ai/docker-agent/reference/config/
+# NEXUS — Docker Agent research team (20 agents)
 #
-# Voice agents (51-56) are NOT in this team: they run inside services/voice-gateway for latency.
-# The Scientific Integrity Engine is code (packages/sie), not an agent.
+# Canonical behaviour for each agent lives in agents/prompts/<name>.md and is loaded with
+# `instruction_file`, so the YAML and the prompt file cannot drift (AGENTS.md §8).
+# Every agent also loads prompts/_team_rules.md first: output contract, evidence rules and
+# the web research policy that applies to every web tool below.
+#
+# Field names checked against the docker-agent config schema (agent-schema.json) and docs:
+#   https://github.com/docker/docker-agent  ·  https://docs.docker.com/ai/docker-agent/reference/config/
+# Docker MCP refs and tool names checked against the Docker MCP catalog (desktop.docker.com/mcp/catalog/v3).
+# Re-check with `docker agent debug config agents/nexus.yaml` after upgrading docker-agent.
+#
+# Not in this team:
+#   - Voice agents 51–56 run inside services/voice-gateway for latency (AGENTS.md §8).
+#   - The Scientific Integrity Engine is code (packages/sie). Agents 41–46 marked "code" in
+#     docs/AGENT_CATALOG.md are deterministic validators, not models.
+
+# Muse provider integration is still to be confirmed (PRD §7.5). Both models go through an
+# OpenAI-compatible gateway configured from the backend environment, so no key or model id
+# is committed here and the headset never sees them (AGENTS.md rule 6).
+providers:
+  muse_gateway:
+    provider: openai
+    api_type: openai_chatcompletions
+    base_url: ${env.MUSE_BASE_URL}
+    token_key: MUSE_API_KEY
+  fast_gateway:
+    provider: openai
+    api_type: openai_chatcompletions
+    base_url: ${env.FAST_BASE_URL}
+    token_key: FAST_API_KEY
 
 models:
   muse:
-    provider: TODO_MUSE_PROVIDER      # confirm Muse provider integration in Phase 1
-    model: TODO_MUSE_MODEL_ID
+    provider: muse_gateway
+    model: ${env.MUSE_MODEL}
+    temperature: 0.2
   fast:
-    provider: TODO_FAST_PROVIDER      # small model for extraction-style tasks
-    model: TODO_FAST_MODEL_ID
+    # Small model for extraction-style tasks.
+    provider: fast_gateway
+    model: ${env.FAST_MODEL}
+    temperature: 0
+
+# Headless runs from services/orchestrator: anything not explicitly allowed below and not
+# annotated read-only is denied without prompting (PRD §9, §17 least privilege).
+runtime:
+  safety: restricted
+
+permissions:
+  allow:
+    - think
+    - "*_todo*"
+    - search
+    - search_wikipedia
+    - get_summary
+    - get_sections
+    - summarize_article_for_query
+    - search_crossref
+    - search_openalex
+    - search_semantic
+    - search_arxiv
+    - get_crossref_paper_by_doi
+    - fetch
+    - evidence_*
+    - dataset_catalog
+    - terrain_measurements
+    - site_features
+    - observation_get
+    - fieldnote_get
+    - data_files_list
+    - data_file_read
+    - team_notes_read
+    - team_note_post
+  deny:
+    # No agent executes code, writes files or downloads papers (AGENTS.md §6, PRD §9).
+    - shell
+    - run_background_job
+    - write_file
+    - edit_file
+    - create_directory
+    - remove_directory
+    - "download_*"
+    - fetch_content   # DuckDuckGo's own fetcher would bypass science_fetch's domain allow-list
+
+# The NEXUS tool server (services/orchestrator/src/mcp/main.ts). One stdio process per agent;
+# they share state through NEXUS_RUN_DIR, which the orchestrator sets per run.
+mcps:
+  nexus:
+    command: pnpm
+    args: ["--silent", "--dir", "services/orchestrator", "exec", "tsx", "src/mcp/main.ts"]
+
+# Shared toolsets. Every agent gets the research kit; only the agents that need it get
+# evidence_candidates (the one write tool, which writes to a quarantined review queue).
+toolsets:
+  # --- Web research (read-only) -------------------------------------------------------
+  web_search:
+    type: mcp
+    ref: docker:duckduckgo
+    tools: [search]
+  wikipedia:
+    type: mcp
+    ref: docker:wikipedia-mcp
+    tools: [search_wikipedia, get_summary, get_sections, summarize_article_for_query]
+  papers:
+    # Scholarly metadata search only. Download tools are not exposed.
+    type: mcp
+    ref: docker:paper-search
+    tools: [search_crossref, search_openalex, search_semantic, search_arxiv, get_crossref_paper_by_doi]
+  science_fetch:
+    # GET-only page reader limited to science and agency hosts. Redirects are re-checked.
+    type: fetch
+    timeout: 20
+    allowed_domains:
+      - nasa.gov
+      - asu.edu          # LROC (lroc.im-ldi.com mirrors are not allowed)
+      - usgs.gov
+      - usra.edu         # LPI, LPSC abstracts
+      - adsabs.harvard.edu
+      - arxiv.org
+      - doi.org
+      - crossref.org
+      - openalex.org
+      - semanticscholar.org
+      - wikipedia.org
+      - esa.int
+      - jaxa.jp
+
+  # --- NEXUS data and files (read-only) -----------------------------------------------
+  nexus_data:
+    # services/orchestrator/src/mcp: evidence packs, precomputed MeasurementRecords, site
+    # features, dataset catalog, the run's observation and field note, and text files under
+    # data/ and docs/ (symlink-safe, binary tiles refused). Every tool here is annotated
+    # readOnlyHint, which `readonly: true` enforces.
+    type: mcp
+    ref: nexus
+    tools:
+      - evidence_lookup
+      - evidence_get
+      - evidence_search
+      - evidence_image
+      - dataset_catalog
+      - terrain_measurements
+      - site_features
+      - observation_get
+      - fieldnote_get
+      - data_files_list
+      - data_file_read
+      - team_notes_read
+    readonly: true
+
+  # --- Thinking and collaboration -------------------------------------------------------
+  private_think:
+    # Each agent's own scratchpad: thoughts are isolated per calling agent, never shared.
+    type: think
+  team_todo:
+    # One task list for the whole team: the coordinator plans, specialists tick off and add.
+    type: todo
+    shared: true
+  team_board:
+    # Post previews, questions, answers and handoffs for other agents in the same run
+    # (read them with team_notes_read). Appends to the run directory only.
+    type: mcp
+    ref: nexus
+    tools: [team_note_post]
+
+  # --- Scoped write -------------------------------------------------------------------
+  evidence_candidates:
+    # Proposes a web source for human curation. It does NOT create an evidence ID; a
+    # proposed source can be cited only after #32 verifies it and a curator adds it to a pack.
+    type: mcp
+    ref: nexus
+    tools: [evidence_candidate_propose]
 
 agents:
   root:
-    # Catalog #1 — Observation Coordinator
+    # Catalog #1 — Observation Coordinator. Makes no scientific claims.
     model: muse
-    description: Routes a lunar observation to specialist agents and merges their structured outputs. Never makes scientific claims itself.
-    instruction: |
-      You coordinate a NEXUS investigation. Follow agents/prompts/observation_coordinator.md.
-      Input: one Observation (+ optional FieldNote) and the Jev routing decision.
-      1. Dispatch lola_elevation_researcher and lroc_imagery_researcher first (independent).
-      2. Then dispatch lunar_geology_researcher, hypothesis_generator and alternative_explanation_researcher with step-1 outputs.
-      3. Then uncertainty_analyst, then research_synthesis_specialist.
-      Return ONLY a JSON array of every AgentOutput you received. Do not edit their claims.
+    description: Routes a lunar observation to specialist agents in phases and returns their structured outputs unchanged.
+    instruction_file: [prompts/_team_rules.md, prompts/observation_coordinator.md]
+    add_date: true
+    max_iterations: 60
     sub_agents:
+      # Phase 1 — what is there
       - lola_elevation_researcher
       - lroc_imagery_researcher
+      - lunar_image_analyst
+      - video_frame_analyst
+      - visual_comparison_researcher
+      # Phase 2 — what it may mean
       - lunar_geology_researcher
+      - impact_crater_researcher
+      - lunar_volcanism_researcher
+      - historical_observation_researcher
+      # Phase 3 — competing explanations
       - hypothesis_generator
       - alternative_explanation_researcher
+      # Phase 4 — weighing the evidence
+      - contradiction_detection_agent
       - uncertainty_analyst
+      - research_gap_detector
+      # Phase 5 — draft
       - research_synthesis_specialist
-    toolsets:
-      - type: think
-      - type: todo
+      # Phase 6 — integrity advisors to the SIE
+      - claim_classification_agent
+      - finding_consistency_auditor
+      # Phase 7 — next steps
+      - followup_investigation_planner
+      - human_review_escalation_agent
+    use_toolsets: &research_kit [private_think, team_todo, team_board, web_search, wikipedia, papers, science_fetch, nexus_data]
+
+  # ======================= Phase 1 — observation and measurement =======================
 
   lola_elevation_researcher:
-    # Catalog #26 — explains measurements computed by packages/terrain; never computes numbers itself
+    # Catalog #26 — explains measurements computed by packages/terrain; never computes numbers.
     model: fast
-    description: Explains terrain measurements (depth, width, slope) for the observed feature using LOLA-derived records.
-    instruction: |
-      Follow agents/prompts/lola_elevation_researcher.md. Use terrain_measurements to get MeasurementRecords.
-      Every number you write must come from a MeasurementRecord and cite its id in measurementIds.
-      Return ONLY JSON matching AgentOutput.
-    toolsets:
-      - type: mcp
-        command: node
-        args: ["services/orchestrator/dist/mcp/nexusTools.js"]
-        tools: [terrain_measurements, evidence_lookup]
+    description: Explains terrain measurements (depth, width, slope) for the feature from precomputed LOLA MeasurementRecords.
+    instruction_file: [prompts/_team_rules.md, prompts/lola_elevation_researcher.md]
+    max_iterations: 12
+    use_toolsets: *research_kit
+    structured_output:
+      mode: tool
+      name: agent_output
+      description: AgentOutput (packages/schemas/src/agentOutput.ts)
+      schema: &agent_output
+        type: object
+        additionalProperties: false
+        required: [agentId, observationId, claims]
+        properties:
+          agentId: { type: string, minLength: 1 }
+          observationId: { type: string, minLength: 1 }
+          claims:
+            type: array
+            items:
+              type: object
+              additionalProperties: false
+              required: [text, claimType, evidenceIds]
+              properties:
+                text: { type: string, minLength: 1 }
+                claimType: { type: string, enum: [observation, measurement, interpretation, hypothesis] }
+                evidenceIds: { type: array, items: { type: string, minLength: 1 } }
+                contradictingEvidenceIds: { type: array, items: { type: string, minLength: 1 } }
+                measurementIds: { type: array, items: { type: string, minLength: 1 } }
+          openQuestions: { type: array, items: { type: string } }
+          uncertainty:
+            type: object
+            additionalProperties: false
+            required: [level, explanation]
+            properties:
+              level: { type: string, enum: [low, medium, high] }
+              explanation: { type: string, minLength: 1 }
+          notes: { type: string }
 
   lroc_imagery_researcher:
     # Catalog #25
     model: muse
-    description: Describes what LROC imagery evidence items show for the observed feature.
-    instruction: |
-      Follow agents/prompts/lroc_imagery_researcher.md. Only describe what is visible; claimType "observation".
-      Cite evidence IDs from evidence_lookup. Return ONLY JSON matching AgentOutput.
-    toolsets:
-      - type: mcp
-        command: node
-        args: ["services/orchestrator/dist/mcp/nexusTools.js"]
-        tools: [evidence_lookup, evidence_image]
+    description: Describes what LROC orbital imagery evidence items show at the observed feature.
+    instruction_file: [prompts/_team_rules.md, prompts/lroc_imagery_researcher.md]
+    max_iterations: 12
+    use_toolsets: *research_kit
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  lunar_image_analyst:
+    # Catalog #2
+    model: muse
+    description: Describes visible features in non-LROC imagery evidence (Moon Trek mosaics, Apollo photographs).
+    instruction_file: [prompts/_team_rules.md, prompts/lunar_image_analyst.md]
+    max_iterations: 12
+    use_toolsets: *research_kit
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  video_frame_analyst:
+    # Catalog #3 — only when the observation has a frameRef.
+    model: muse
+    description: Describes the selected frame of the labelled, simulated observation video.
+    instruction_file: [prompts/_team_rules.md, prompts/video_frame_analyst.md]
+    max_iterations: 10
+    use_toolsets: *research_kit
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  visual_comparison_researcher:
+    # Catalog #8 — only when a second observation is supplied.
+    model: muse
+    description: Compares two observations visually and lists observable similarities and differences.
+    instruction_file: [prompts/_team_rules.md, prompts/visual_comparison_researcher.md]
+    max_iterations: 12
+    use_toolsets: *research_kit
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  # ============================ Phase 2 — interpretation ============================
 
   lunar_geology_researcher:
     # Catalog #11
     model: muse
     description: Proposes geological interpretations grounded in the site's curated literature excerpts.
-    instruction: |
-      Follow agents/prompts/lunar_geology_researcher.md. Use only text evidence from evidence_lookup.
-      claimType "interpretation". Return ONLY JSON matching AgentOutput.
-    toolsets:
-      - type: mcp
-        command: node
-        args: ["services/orchestrator/dist/mcp/nexusTools.js"]
-        tools: [evidence_lookup]
+    instruction_file: [prompts/_team_rules.md, prompts/lunar_geology_researcher.md]
+    max_iterations: 15
+    use_toolsets: &research_kit_plus [private_think, team_todo, team_board, web_search, wikipedia, papers, science_fetch, nexus_data, evidence_candidates]
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  impact_crater_researcher:
+    # Catalog #12 — crater features only.
+    model: muse
+    description: Interprets crater morphology, degradation state and relative age from imagery, measurements and literature.
+    instruction_file: [prompts/_team_rules.md, prompts/impact_crater_researcher.md]
+    max_iterations: 15
+    use_toolsets: *research_kit_plus
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  lunar_volcanism_researcher:
+    # Catalog #14 — rilles, domes, mare features.
+    model: muse
+    description: Interprets volcanic features, including sinuous rilles, from imagery, measurements and literature.
+    instruction_file: [prompts/_team_rules.md, prompts/lunar_volcanism_researcher.md]
+    max_iterations: 15
+    use_toolsets: *research_kit_plus
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  historical_observation_researcher:
+    # Catalog #20
+    model: muse
+    description: Relates the feature to Apollo-era observations, crew descriptions and mission records in the evidence pack.
+    instruction_file: [prompts/_team_rules.md, prompts/historical_observation_researcher.md]
+    max_iterations: 15
+    use_toolsets: *research_kit_plus
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  # ======================== Phase 3 — competing explanations ========================
 
   hypothesis_generator:
-    # Catalog #33
+    # Catalog #33 — the Hypothesis Advocate in Evidence Debate.
     model: muse
     description: Produces 2-3 competing hypotheses, each with supporting evidence IDs.
-    instruction: |
-      Follow agents/prompts/hypothesis_generator.md. claimType "hypothesis". Return ONLY JSON matching AgentOutput.
-    toolsets:
-      - type: mcp
-        command: node
-        args: ["services/orchestrator/dist/mcp/nexusTools.js"]
-        tools: [evidence_lookup]
-      - type: think
+    instruction_file: [prompts/_team_rules.md, prompts/hypothesis_generator.md]
+    max_iterations: 15
+    use_toolsets: *research_kit_plus
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
 
   alternative_explanation_researcher:
-    # Catalog #34 — the Skeptic
+    # Catalog #34 — the Skeptic.
     model: muse
     description: Finds alternative explanations and evidence that contradicts the leading hypotheses.
-    instruction: |
-      Follow agents/prompts/alternative_explanation_researcher.md. Fill contradictingEvidenceIds.
-      Return ONLY JSON matching AgentOutput.
-    toolsets:
-      - type: mcp
-        command: node
-        args: ["services/orchestrator/dist/mcp/nexusTools.js"]
-        tools: [evidence_lookup]
-      - type: think
+    instruction_file: [prompts/_team_rules.md, prompts/alternative_explanation_researcher.md]
+    max_iterations: 15
+    use_toolsets: *research_kit_plus
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  # ========================== Phase 4 — weighing the evidence ==========================
+
+  contradiction_detection_agent:
+    # Catalog #36 — supports SIE V6; the SIE makes the decision.
+    model: muse
+    description: Flags pairs of claims and evidence items that contradict each other across agent outputs.
+    instruction_file: [prompts/_team_rules.md, prompts/contradiction_detection_agent.md]
+    max_iterations: 10
+    use_toolsets: *research_kit
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
 
   uncertainty_analyst:
     # Catalog #37
     model: fast
     description: Assigns an uncertainty level and plain explanation to the investigation.
-    instruction: |
-      Follow agents/prompts/uncertainty_analyst.md. Return ONLY JSON matching AgentOutput with the uncertainty field set.
+    instruction_file: [prompts/_team_rules.md, prompts/uncertainty_analyst.md]
+    max_iterations: 8
+    use_toolsets: *research_kit
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  research_gap_detector:
+    # Catalog #38
+    model: muse
+    description: Lists the data and sources that are missing for the investigation to reach lower uncertainty.
+    instruction_file: [prompts/_team_rules.md, prompts/research_gap_detector.md]
+    max_iterations: 12
+    use_toolsets: *research_kit_plus
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  # ================================ Phase 5 — draft ================================
 
   research_synthesis_specialist:
-    # Catalog #22
+    # Catalog #22 — documented output variant: { findingDraft, spokenBriefingDraft }.
     model: muse
-    description: Drafts the ScientificFinding and the spoken briefing script from validated agent outputs.
-    instruction: |
-      Follow agents/prompts/research_synthesis_specialist.md. Do not add claims that no agent made.
-      Return ONLY JSON: { "findingDraft": ..., "spokenBriefingDraft": ... }.
+    description: Drafts the ScientificFinding and the spoken briefing script from agent outputs, adding no new claims.
+    instruction_file: [prompts/_team_rules.md, prompts/research_synthesis_specialist.md]
+    max_iterations: 8
+    use_toolsets: *research_kit
+    structured_output:
+      mode: tool
+      name: synthesis_output
+      schema:
+        type: object
+        additionalProperties: false
+        required: [findingDraft, spokenBriefingDraft]
+        properties:
+          findingDraft: { type: object }
+          spokenBriefingDraft:
+            type: object
+            additionalProperties: false
+            required: [script, sentenceEvidence, speakerAgentId]
+            properties:
+              script: { type: string, minLength: 1 }
+              sentenceEvidence: { type: array, items: { type: array, items: { type: string } } }
+              speakerAgentId: { type: string, minLength: 1 }
+
+  # ===================== Phase 6 — integrity advisors to the SIE =====================
+
+  claim_classification_agent:
+    # Catalog #43 — advises SIE V5; never changes another agent's claim.
+    model: fast
+    description: Checks that every draft claim carries the right claim type and suggests corrections for the SIE.
+    instruction_file: [prompts/_team_rules.md, prompts/claim_classification_agent.md]
+    max_iterations: 8
+    use_toolsets: *research_kit
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  finding_consistency_auditor:
+    # Catalog #45
+    model: muse
+    description: Checks that the finding draft's summary and spoken briefing say nothing the claims do not support.
+    instruction_file: [prompts/_team_rules.md, prompts/finding_consistency_auditor.md]
+    max_iterations: 8
+    use_toolsets: *research_kit
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  # ============================== Phase 7 — next steps ==============================
+
+  followup_investigation_planner:
+    # Catalog #39
+    model: muse
+    description: Suggests next observations and datasets that would test the open hypotheses.
+    instruction_file: [prompts/_team_rules.md, prompts/followup_investigation_planner.md]
+    max_iterations: 12
+    use_toolsets: *research_kit
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+  human_review_escalation_agent:
+    # Catalog #46 — only when the draft is contested, uncertainty is high, or the SIE escalates.
+    model: muse
+    description: Prepares a short escalation note telling the scientist exactly what to check and why.
+    instruction_file: [prompts/_team_rules.md, prompts/human_review_escalation_agent.md]
+    max_iterations: 8
+    use_toolsets: *research_kit
+    structured_output: { mode: tool, name: agent_output, schema: *agent_output }
