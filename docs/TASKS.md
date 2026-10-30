@@ -27,7 +27,7 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 ## Phase 3 — Agent research (Nov 3 – Nov 8)
 
 - [ ] Evidence packs for 3 sites (verified URLs, credits)
-- [ ] `packages/terrain` measurements + tests
+- [x] `packages/terrain` measurements + tests
 - [ ] MCP tools: `evidence_lookup`, `terrain_measurements`
 - [ ] Coordinator + 5 specialists running in Docker Agent; parallel where independent
 - [ ] Orchestrator: timeouts, retries, `AgentOutput` parsing
