@@ -66,7 +66,12 @@ export class Diorama {
   }
 
   toWorld(layout: Vec3): Vector3 {
+    return this.toWorldInto(layout, new Vector3());
+  }
+
+  /** Allocation-free toWorld for the render loop. */
+  toWorldInto(layout: Vec3, out: Vector3): Vector3 {
     this.pivot.updateWorldMatrix(true, true);
-    return this.inner.localToWorld(new Vector3(layout.x, layout.y, layout.z));
+    return this.inner.localToWorld(out.set(layout.x, layout.y, layout.z));
   }
 }

@@ -3,7 +3,7 @@ import { NexusApp } from "./app.js";
 import { SITES } from "./config.js";
 import type { Emulator } from "./emulator.js";
 import { createWorld } from "./scene/world.js";
-import "./style.css";
+import "./web/style.css";
 
 async function boot(): Promise<void> {
   const root = document.querySelector<HTMLElement>("#app");

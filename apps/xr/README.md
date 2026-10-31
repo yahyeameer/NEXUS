@@ -64,16 +64,39 @@ passthrough (`immersive-ar`) session when the headset supports it, so the dioram
 
 ```
 src/main.ts           boot: native WebXR or the emulator
-src/emulator.ts       IWER device, dev UI, test target resolver, simulated-speech box
+src/emulator.ts       IWER device, dev UI, test target resolver
 src/app.ts            screens, selection → research → finding → review, wrist menu, voice wiring
 src/scene/            world, terrain diorama (packages/terrain buildMesh), feature picking, tile↔scene mapping
-src/input/            fingertip poke + ray/pinch for hands and controllers
-src/ui/               canvas panels and the finding-card model
+src/input/            fingertip poke + ray/pinch for hands and controllers; mouse-as-hand for the desktop emulator
+src/ui/               the finding-card model and text layout
+src/ui/spatial/       NEXUS Spatial UI design system (below)
+src/web/              desktop-only HTML: simulated-speech box, controls card, page styles
 src/net/, src/audio/  API + event stream, voice gateway socket, push-to-talk mic, captioned speech
 ```
+
+## NEXUS Spatial UI design system
+
+World-space UI built directly on three.js, the client's existing renderer. `src/ui/spatial/tokens.ts` holds the
+colours (dark translucent glass, one restrained cyan accent, amber only for "needs you"), type scale and motion.
+
+| Component | What it is |
+| --- | --- |
+| `SpatialGlassPanel` | Base panel: canvas-drawn glass card with poke/ray buttons ≥ 4 cm, open/close fades and glides. A panel only reports button targets once it has settled, so a fingertip never chases a moving button |
+| `ScientificFindingPanel` | The main card. Rises out of the selected feature, glides to its comfortable dock and stays tethered to the feature |
+| `AgentActivityPanel` | Display-only card over the feature under investigation: which agents are working, done or stopped |
+| `EvidenceViewer` | Evidence window with credit, licence and archival label, plus an evidence beam to the feature |
+| `ScientificDecisionControls` | Approve / Reject / Inconclusive and the card's action row, in one place so the wording stays within AGENTS.md |
+| `ObservationMarker` | Ring, halo, stem and bead on the terrain; colour follows the research state, swells under the pointer |
+| `RockSelectionOutline` | Glowing line draped on the DEM around the selected feature's real footprint (rim, patch or rille course) |
+| `ScanningBeam` | Faint cone and sweeping ring over a feature while it is researched. Shows work, never a result |
+| `SpatialConnector` | Arc with a travelling pulse that ties a panel to its feature |
+| `ResearchStatusIndicator` | Pill over a marker: Researching, Needs evidence, Ready for review, Approved by you… |
+
+Panels draw over the terrain, and rays and pokes prefer the panel they visibly cross. HTML in `src/web` never imports
+from `src/ui/spatial`, and nothing in `src/ui/spatial` touches the DOM outside its own canvases.
 
 ## Not yet in this client
 
 Grab-and-move of the terrain; the immersive mode; the video panel; debate; whisper mode; suggested-question chips;
-spatial (HRTF) voices; evidence beams; audio cues for ring states; the offline precomputed bundle inside the client.
+spatial (HRTF) voices; audio cues for ring states; the offline precomputed bundle inside the client.
 These follow the later milestones in `docs/TASKS.md`.

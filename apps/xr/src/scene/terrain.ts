@@ -4,18 +4,8 @@ import { featureCollection } from "@nexus/schemas";
 import type { TerrainFeature } from "@nexus/schemas";
 import { buildMesh, parseDem, sampleElevation } from "@nexus/terrain";
 import type { DemGrid } from "@nexus/terrain";
-import {
-  BufferAttribute,
-  BufferGeometry,
-  Group,
-  Mesh,
-  MeshBasicMaterial,
-  MeshStandardMaterial,
-  RingGeometry,
-  SRGBColorSpace,
-  TextureLoader,
-} from "three";
-import type { RingState } from "../ui/findingView.js";
+import { BufferAttribute, BufferGeometry, Group, Mesh, MeshStandardMaterial, SRGBColorSpace, TextureLoader } from "three";
+import { ObservationMarker } from "../ui/spatial/observationMarker.js";
 import { featureCenter } from "./featurePick.js";
 import type { TileFrame, Vec3 } from "./tabletop.js";
 import { tileFrame, tileToScene } from "./tabletop.js";
@@ -27,9 +17,13 @@ export interface LoadedSite {
   frame: TileFrame;
   grid: DemGrid;
   features: TerrainFeature[];
-  markers: Map<string, Mesh<RingGeometry, MeshBasicMaterial>>;
+  markers: Map<string, ObservationMarker>;
   /** Scene position of each feature's anchor point. */
   anchors: Map<string, Vec3>;
+  /** Footprint radius of each feature in scene metres (marker and scanning beam size). */
+  radii: Map<string, number>;
+  /** Lowest elevation in the tile, where the diorama meets the table. */
+  minElevation: number;
 }
 
 const TERRAIN_BASE = `${import.meta.env.BASE_URL}terrain`;
@@ -75,36 +69,22 @@ export async function loadSite(siteId: string): Promise<LoadedSite> {
   const group = new Group();
   group.name = `site:${siteId}`;
   group.add(terrain);
-  const markers = new Map<string, Mesh<RingGeometry, MeshBasicMaterial>>();
+  const markers = new Map<string, ObservationMarker>();
   const anchors = new Map<string, Vec3>();
+  const radii = new Map<string, number>();
   for (const f of features) {
     const c = featureCenter(f);
     const elevation = sampleElevation(grid.value, c) ?? minY;
     const anchor = tileToScene(frame, { x: c.x, y: elevation, z: c.z });
     anchors.set(f.id, anchor);
     const radius = Math.max(0.025, footprintM(f) * frame.scale);
-    const ring = new Mesh(new RingGeometry(radius * 0.86, radius, 48), new MeshBasicMaterial({ color: RING_COLORS.idle, transparent: true, opacity: 0.85, depthTest: false }));
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.set(anchor.x, anchor.y + 0.004, anchor.z);
-    ring.renderOrder = 2;
-    ring.name = `marker:${f.id}`;
-    markers.set(f.id, ring);
-    group.add(ring);
+    radii.set(f.id, radius);
+    const marker = new ObservationMarker(f.id, anchor, radius);
+    markers.set(f.id, marker);
+    group.add(marker.group);
   }
-  return { siteId, group, terrain, frame, grid: grid.value, features, markers, anchors };
+  return { siteId, group, terrain, frame, grid: grid.value, features, markers, anchors, radii, minElevation: minY };
 }
-
-/** INTERACTION.md §4. "idle" glows so first-time users know what they can pinch. */
-export const RING_COLORS: Record<RingState | "idle" | "selected", number> = {
-  idle: 0x7fd6ff,
-  selected: 0xffffff,
-  observed: 0x9a9a9a,
-  researching: 0x9bb8ff,
-  ready: 0xf2a93b,
-  needs_evidence: 0xc98a2c,
-  reviewed: 0x4fc26b,
-  closed: 0x707070,
-};
 
 function footprintM(f: TerrainFeature): number {
   switch (f.kind) {

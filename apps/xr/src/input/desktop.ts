@@ -5,6 +5,7 @@ import type { XRDevice } from "iwer";
 import { Quaternion, Raycaster, Vector2, Vector3 } from "three";
 import type { NexusApp } from "../app.js";
 import type { World } from "../scene/world.js";
+import { controlsCard } from "../web/controlsCard.js";
 
 /** How far in front of the eye the emulated hand floats while the mouse moves it. */
 const HAND_DISTANCE_M = 0.55;
@@ -12,16 +13,6 @@ const FORWARD = new Vector3(0, 0, -1);
 
 const CONFIRM = ["pair:go", "onboard:start", "sel:investigate"];
 
-const KEYS: { keys: string; does: string }[] = [
-  { keys: "Click", does: "press a button, pick a feature" },
-  { keys: "Drag terrain", does: "turn it" },
-  { keys: "Wheel", does: "zoom" },
-  { keys: "0–9 · ⌫", does: "pairing code" },
-  { keys: "Enter", does: "pair · start · investigate" },
-  { keys: "Hold Space", does: "talk" },
-  { keys: "Q / E · + / −", does: "turn · zoom" },
-  { keys: "R", does: "reset view" },
-];
 
 export class DesktopControls {
   private readonly ndc = new Vector2(0.4, -0.2);
@@ -57,7 +48,7 @@ export class DesktopControls {
     }, { passive: false });
     window.addEventListener("keydown", (e) => this.key(e, "down"));
     window.addEventListener("keyup", (e) => this.key(e, "up"));
-    document.body.append(helpCard());
+    document.body.append(controlsCard());
   }
 
   /** Called every frame: sends at most one hand pose per frame however fast the mouse moves. */
@@ -139,11 +130,4 @@ function shortcut(key: string): string | undefined {
     default:
       return undefined;
   }
-}
-
-function helpCard(): HTMLElement {
-  const card = document.createElement("aside");
-  card.className = "controls";
-  card.innerHTML = `<h2>Desktop controls</h2><dl>${KEYS.map((k) => `<dt>${k.keys}</dt><dd>${k.does}</dd>`).join("")}</dl>`;
-  return card;
 }

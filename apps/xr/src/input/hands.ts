@@ -3,7 +3,7 @@
 import { BufferGeometry, Line, LineBasicMaterial, Mesh, MeshBasicMaterial, Quaternion, Raycaster, SphereGeometry, Vector3 } from "three";
 import type { Group, Object3D, WebGLRenderer, XRHandSpace, XRTargetRaySpace } from "three";
 import { XRHandModelFactory } from "three/addons/webxr/XRHandModelFactory.js";
-import type { Panel } from "../ui/panel.js";
+import type { SpatialGlassPanel as Panel } from "../ui/spatial/glassPanel.js";
 import { isTap, TAP_MAX_MOVE_M, yawDelta } from "./manipulate.js";
 import type { Point2 } from "./manipulate.js";
 import { PokeTracker } from "./poke.js";
@@ -88,7 +88,7 @@ export class HandInput {
 
   /** Per-frame: fingertip pokes and ray hover. */
   update(): void {
-    const panels = this.hooks.panels().filter((p) => p.mesh.visible);
+    const panels = this.hooks.panels().filter((p) => p.interactive);
     for (const slot of this.slots) {
       this.updatePokes(slot, panels);
       this.updateRay(slot, panels);
@@ -198,7 +198,9 @@ export class HandInput {
     this.raycaster.far = RAY_LENGTH_M;
     const terrain = this.hooks.terrain();
     const hits = this.raycaster.intersectObjects(terrain ? [...panels.map((p) => p.mesh), terrain] : panels.map((p) => p.mesh), false);
-    const first = hits[0];
+    // Panels draw over the terrain (depthTest off), so a ray takes the panel it visibly crosses even when a corner
+    // of the zoomed diorama is physically nearer.
+    const first = hits.find((h) => panels.some((p) => p.mesh === h.object)) ?? hits[0];
     if (!first) return undefined;
     const panel = panels.find((p) => p.mesh === first.object);
     if (!panel) return { point: first.point, distance: first.distance };
@@ -208,7 +210,7 @@ export class HandInput {
   }
 
   private selectStart(slot: Slot): void {
-    const panels = this.hooks.panels().filter((p) => p.mesh.visible);
+    const panels = this.hooks.panels().filter((p) => p.interactive);
     const hit = this.cast(slot, panels);
     if (!hit) return;
     if (hit.panel) {

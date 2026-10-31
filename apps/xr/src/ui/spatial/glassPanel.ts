@@ -1,11 +1,14 @@
-// Near-field UI panel: a canvas texture on a plane, with poke/ray buttons in panel-local metres.
+// SpatialGlassPanel: the base of every NEXUS panel. A canvas texture on a plane, with poke/ray buttons in panel-local
+// metres, a dark translucent glass look and smooth open, close and glide transitions.
 // No UI library: keeps the Quest bundle small (AGENTS.md §10) and the hit areas exact for poke (≥ 4 cm, INTERACTION.md §3).
 import { CanvasTexture, DoubleSide, Mesh, MeshBasicMaterial, PlaneGeometry, SRGBColorSpace, Vector3 } from "three";
 import type { Object3D } from "three";
-import type { Rect } from "../input/poke.js";
-import { wrapText } from "./textLayout.js";
+import type { Rect } from "../../input/poke.js";
+import { wrapText } from "../textLayout.js";
+import { BUTTON, COLOR, FONT_FAMILY, MOTION, SPACE, TYPE } from "./tokens.js";
+import type { ButtonTone, TextTone } from "./tokens.js";
 
-export type ButtonStyle = "primary" | "secondary" | "chip" | "danger" | "active";
+export type ButtonStyle = ButtonTone;
 
 export interface ButtonSpec {
   id: string;
@@ -15,7 +18,7 @@ export interface ButtonSpec {
 
 export interface PanelLine {
   text: string;
-  tone: "title" | "body" | "muted" | "warn";
+  tone: TextTone;
   badge?: string;
 }
 
@@ -32,26 +35,22 @@ export interface PanelButton extends ButtonSpec {
 }
 
 const PX_PER_M = 2400;
-const MARGIN = 0.014;
+const MARGIN = SPACE.margin;
 /** Poke targets ≥ 4 cm with ≥ 1 cm spacing (INTERACTION.md §3). */
-export const BUTTON_H = 0.042;
-const GAP = 0.01;
-const FONT: Record<PanelLine["tone"], { size: number; color: string; weight: string }> = {
-  title: { size: 0.0145, color: "#ffffff", weight: "700" },
-  body: { size: 0.0102, color: "#e4ebf5", weight: "400" },
-  muted: { size: 0.009, color: "#97a6bd", weight: "400" },
-  warn: { size: 0.0097, color: "#ffc671", weight: "600" },
-};
-/** Top and bottom of each button's gradient, plus a rim colour that reads as a lit edge. */
-const BUTTON_COLORS: Record<ButtonStyle, { top: string; bottom: string; rim: string; fg: string }> = {
-  primary: { top: "#4aa8ff", bottom: "#2563eb", rim: "#9fd2ff", fg: "#ffffff" },
-  secondary: { top: "#3a4560", bottom: "#262e44", rim: "#566383", fg: "#eef3ff" },
-  chip: { top: "#1f7a82", bottom: "#135a62", rim: "#5fd9e3", fg: "#e9fdff" },
-  danger: { top: "#d4525a", bottom: "#a02a38", rim: "#ff9aa2", fg: "#ffffff" },
-  active: { top: "#ffa24d", bottom: "#e0662a", rim: "#ffd29c", fg: "#ffffff" },
-};
+export const BUTTON_H = SPACE.buttonH;
+const GAP = SPACE.gap;
+const FONT = TYPE;
+const BUTTON_COLORS = BUTTON;
 
-export class Panel {
+function font(tone: TextTone): string {
+  const f = FONT[tone];
+  return `${f.weight} ${Math.round(f.size * PX_PER_M)}px ${FONT_FAMILY}`;
+}
+
+type Fade = { kind: "open" | "close"; start: number };
+type Glide = { from: Vector3; to: Vector3; face: Vector3; start: number };
+
+export class SpatialGlassPanel {
   readonly mesh: Mesh<PlaneGeometry, MeshBasicMaterial>;
   buttons: PanelButton[] = [];
   private readonly canvas: HTMLCanvasElement;
@@ -61,11 +60,16 @@ export class Panel {
   private page = 0;
   private highlighted?: string;
   private hovered?: string;
+  private fade?: Fade;
+  private glide?: Glide;
+  private closing = false;
 
   constructor(
     readonly name: string,
     readonly widthM: number,
     readonly heightM: number,
+    /** Display-only panels (no buttons) show their first page and never grow paging buttons. */
+    private readonly paging = true,
   ) {
     this.canvas = document.createElement("canvas");
     this.canvas.width = Math.round(widthM * PX_PER_M);
@@ -75,7 +79,7 @@ export class Panel {
     this.ctx = ctx;
     this.texture = new CanvasTexture(this.canvas);
     this.texture.colorSpace = SRGBColorSpace;
-    this.mesh = new Mesh(new PlaneGeometry(widthM, heightM), new MeshBasicMaterial({ map: this.texture, transparent: true, side: DoubleSide, depthTest: false }));
+    this.mesh = new Mesh(new PlaneGeometry(widthM, heightM), new MeshBasicMaterial({ map: this.texture, transparent: true, opacity: 1, side: DoubleSide, depthTest: false, depthWrite: false }));
     this.mesh.name = name;
     // UI is drawn over the terrain so a zoomed-in diorama never hides a button.
     this.mesh.renderOrder = 5;
@@ -84,6 +88,87 @@ export class Panel {
 
   get object(): Object3D {
     return this.mesh;
+  }
+
+  /** Shown, or on its way in. */
+  get isOpen(): boolean {
+    return this.mesh.visible && !this.closing;
+  }
+
+  /** Can take pokes and ray presses: open or opening, never while fading out. */
+  get interactive(): boolean {
+    return this.isOpen;
+  }
+
+  /** Not moving or fading in, so a fingertip aimed at a button now will still find it there. */
+  get settled(): boolean {
+    return this.isOpen && !this.glide && this.fade?.kind !== "open";
+  }
+
+  /** Fades and scales in. Calling it on an open panel does nothing. */
+  open(now = performance.now()): void {
+    if (this.isOpen) return;
+    this.closing = false;
+    this.mesh.visible = true;
+    this.fade = { kind: "open", start: now };
+    this.applyFade(0);
+  }
+
+  /** Fades out, then hides. Input stops at once so a finger cannot press a fading button. */
+  close(now = performance.now()): void {
+    if (!this.mesh.visible || this.closing) return;
+    this.closing = true;
+    this.fade = { kind: "close", start: now };
+  }
+
+  /** Show or hide without a transition (initial state, tests). */
+  setOpen(open: boolean): void {
+    this.fade = undefined;
+    this.closing = false;
+    this.mesh.visible = open;
+    this.applyFade(1);
+  }
+
+  /** Puts the panel at `position` facing `face`, at once. */
+  place(position: Vector3, face: Vector3): void {
+    this.glide = undefined;
+    this.mesh.position.copy(position);
+    this.mesh.lookAt(face);
+  }
+
+  /** Slides to `position` facing `face`; `from` starts it somewhere else, e.g. at the rock it belongs to. */
+  glideTo(position: Vector3, face: Vector3, from?: Vector3, now = performance.now()): void {
+    if (from) this.mesh.position.copy(from);
+    if (!from && this.mesh.position.distanceToSquared(position) < 1e-6) return this.place(position, face);
+    this.glide = { from: this.mesh.position.clone(), to: position.clone(), face: face.clone(), start: now };
+  }
+
+  /** Advances transitions; call once per frame. Allocation-free. */
+  update(now: number): void {
+    const g = this.glide;
+    if (g) {
+      const t = MOTION.ease((now - g.start) / MOTION.glideMs);
+      this.mesh.position.lerpVectors(g.from, g.to, t);
+      this.mesh.lookAt(g.face);
+      if (t >= 1) this.glide = undefined;
+    }
+    const f = this.fade;
+    if (!f) return;
+    const dur = f.kind === "open" ? MOTION.openMs : MOTION.closeMs;
+    const t = MOTION.ease((now - f.start) / dur);
+    this.applyFade(f.kind === "open" ? t : 1 - t);
+    if (t < 1) return;
+    this.fade = undefined;
+    if (f.kind === "close") {
+      this.mesh.visible = false;
+      this.closing = false;
+      this.applyFade(1);
+    }
+  }
+
+  private applyFade(k: number): void {
+    this.mesh.material.opacity = k;
+    this.mesh.scale.setScalar(0.94 + 0.06 * k);
   }
 
   set(content: PanelContent): void {
@@ -124,7 +209,7 @@ export class Panel {
   /** A button's centre and face normal in world space, for the emulator's target resolver. */
   buttonWorld(id: string): { position: Vector3; normal: Vector3; size: Vector3 } | undefined {
     const b = this.buttons.find((x) => x.id === id);
-    if (!b || !this.mesh.visible) return undefined;
+    if (!b || !this.settled) return undefined;
     this.mesh.updateWorldMatrix(true, false);
     const position = this.mesh.localToWorld(new Vector3(b.rect.x + b.rect.w / 2 - this.widthM / 2, b.rect.y + b.rect.h / 2 - this.heightM / 2, 0));
     const normal = new Vector3(0, 0, 1).transformDirection(this.mesh.matrixWorld);
@@ -135,23 +220,23 @@ export class Panel {
     const { ctx, canvas } = this;
     const s = PX_PER_M;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // Glass card: deep navy gradient, a lit rim and a cyan-to-violet accent bar along the top edge.
+    // Dark translucent glass with a faint lit rim and a thin cyan accent along the top edge.
     const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    bg.addColorStop(0, "rgba(24, 32, 54, 0.95)");
-    bg.addColorStop(1, "rgba(10, 13, 24, 0.95)");
+    bg.addColorStop(0, COLOR.glassTop);
+    bg.addColorStop(1, COLOR.glassBottom);
     ctx.fillStyle = bg;
-    roundRect(ctx, 0, 0, canvas.width, canvas.height, 0.016 * s);
+    roundRect(ctx, 0, 0, canvas.width, canvas.height, SPACE.radius * s);
     ctx.fill();
-    ctx.lineWidth = 0.0016 * s;
-    ctx.strokeStyle = "rgba(120, 190, 255, 0.55)";
-    roundRect(ctx, ctx.lineWidth / 2, ctx.lineWidth / 2, canvas.width - ctx.lineWidth, canvas.height - ctx.lineWidth, 0.016 * s);
+    ctx.lineWidth = 0.0014 * s;
+    ctx.strokeStyle = COLOR.glassRim;
+    roundRect(ctx, ctx.lineWidth / 2, ctx.lineWidth / 2, canvas.width - ctx.lineWidth, canvas.height - ctx.lineWidth, SPACE.radius * s);
     ctx.stroke();
     const bar = ctx.createLinearGradient(0, 0, canvas.width, 0);
-    bar.addColorStop(0, "#37d6ff");
-    bar.addColorStop(1, "#9a6bff");
+    bar.addColorStop(0, "rgba(79, 216, 255, 0)");
+    bar.addColorStop(0.5, COLOR.accent);
+    bar.addColorStop(1, "rgba(79, 216, 255, 0)");
     ctx.fillStyle = bar;
-    roundRect(ctx, 0.016 * s, 0.0045 * s, canvas.width - 0.032 * s, 0.0032 * s, 0.0016 * s);
-    ctx.fill();
+    ctx.fillRect(SPACE.radius * s, 0.0016 * s, canvas.width - 2 * SPACE.radius * s, 0.0016 * s);
 
     // Buttons bottom-up; text fills what is left above them.
     const rows = [...this.content.rows];
@@ -161,7 +246,7 @@ export class Panel {
     const imgH = img ? Math.min((this.widthM - 2 * MARGIN) / img.aspect, this.heightM * 0.42) * s : 0;
     const pages = paginate(textLines, canvas.height - textBottom - MARGIN * s - imgH);
     this.page = Math.min(this.page, pages.length - 1);
-    if (pages.length > 1) {
+    if (pages.length > 1 && this.paging) {
       rows.push([
         { id: "page:prev", label: "◀ Previous", style: "secondary" },
         { id: "page:next", label: `More (${this.page + 1}/${pages.length}) ▶`, style: "secondary" },
@@ -184,15 +269,15 @@ export class Panel {
       }
       lineIndex++;
       const f = FONT[l.tone];
-      ctx.font = `${f.weight} ${Math.round(f.size * s)}px system-ui, sans-serif`;
+      ctx.font = font(l.tone);
       ctx.textBaseline = "top";
       let x = MARGIN * s;
       if (l.badge) {
         const bw = ctx.measureText(l.badge).width + 0.008 * s;
-        ctx.fillStyle = "#4b3fa8";
+        ctx.fillStyle = COLOR.badgeBg;
         roundRect(ctx, x, y - 0.001 * s, bw, f.size * 1.25 * s, 0.003 * s);
         ctx.fill();
-        ctx.fillStyle = "#f1eeff";
+        ctx.fillStyle = COLOR.badgeFg;
         ctx.fillText(l.badge, x + 0.004 * s, y);
         x += bw + 0.004 * s;
       }
@@ -222,7 +307,7 @@ export class Panel {
         ctx.globalAlpha = 1;
       }
       ctx.fillStyle = fill;
-      roundRect(ctx, px, py, bw, bh, 0.01 * s);
+      roundRect(ctx, px, py, bw, bh, SPACE.buttonRadius * s);
       ctx.fill();
       ctx.lineWidth = (hot ? 0.0018 : 0.001) * s;
       ctx.strokeStyle = hot ? "#ffffff" : c.rim;
@@ -230,7 +315,7 @@ export class Panel {
       ctx.stroke();
       ctx.globalAlpha = 1;
       ctx.fillStyle = c.fg;
-      ctx.font = `600 ${Math.round(0.0112 * s)}px system-ui, sans-serif`;
+      ctx.font = `600 ${Math.round(0.011 * s)}px ${FONT_FAMILY}`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(fit(ctx, b.label, b.rect.w * s - 0.008 * s), px + bw / 2, py + bh / 2);
@@ -245,8 +330,7 @@ export class Panel {
     const s = PX_PER_M;
     const out: (PanelLine & { gapAfter?: boolean })[] = [];
     for (const l of this.content.lines) {
-      const f = FONT[l.tone];
-      ctx.font = `${f.weight} ${Math.round(f.size * s)}px system-ui, sans-serif`;
+      ctx.font = font(l.tone);
       const badgeW = l.badge ? ctx.measureText(l.badge).width + 0.012 * s : 0;
       const wrapped = wrapText(l.text, (this.widthM - 2 * MARGIN) * s - badgeW, (t) => ctx.measureText(t).width);
       wrapped.forEach((t, i) => out.push({ text: t, tone: l.tone, badge: i === 0 ? l.badge : undefined, gapAfter: i === wrapped.length - 1 }));
