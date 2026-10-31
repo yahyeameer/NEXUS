@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { ScientificFinding, TerrainFeature } from "@nexus/schemas";
 import { resample, toPcm16 } from "./audio/pcm.js";
+import { isTap, yawDelta, zoomedScale } from "./input/manipulate.js";
 import { PokeTracker } from "./input/poke.js";
+import { Diorama } from "./scene/diorama.js";
 import { distanceToFeature, featureCenter, pickFeature } from "./scene/featurePick.js";
 import { sceneToTile, tileFrame, tileToScene } from "./scene/tabletop.js";
 import { agentName, cardModel, ringFor } from "./ui/findingView.js";
@@ -142,5 +144,34 @@ describe("labels", () => {
   it("wraps text greedily and names agents readably", () => {
     expect(wrapText("one two three four", 9, (s) => s.length)).toEqual(["one two", "three", "four"]);
     expect(agentName("26_lola_elevation_researcher")).toBe("LOLA elevation researcher");
+  });
+});
+
+describe("terrain manipulation", () => {
+  it("treats a still pinch as a select and a moving one as a drag", () => {
+    expect(isTap(0.005)).toBe(true);
+    expect(isTap(0.05)).toBe(false);
+  });
+  it("turns with a hand circling the pivot, counter-clockwise positive", () => {
+    const pivot = { x: 0, z: -1 };
+    expect(yawDelta(pivot, { x: 1, z: -1 }, { x: 0, z: -2 })).toBeCloseTo(Math.PI / 2, 9);
+    expect(yawDelta(pivot, { x: 1, z: -1 }, { x: 0, z: 0 })).toBeCloseTo(-Math.PI / 2, 9);
+  });
+  it("zooms with the change in hand separation, within limits", () => {
+    expect(zoomedScale(1, 0.2, 0.3)).toBeCloseTo(1.5, 9);
+    expect(zoomedScale(1, 0.2, 2)).toBe(3);
+    expect(zoomedScale(1, 0.4, 0.05)).toBe(0.5);
+  });
+  it("keeps picking exact while the diorama is turned and zoomed", () => {
+    const d = new Diorama();
+    d.rotateBy(0.7);
+    d.setScale(1.8);
+    const layout = { x: 0.1, y: 0.76, z: -0.7 };
+    const back = d.toLayout(d.toWorld(layout));
+    expect(back.x).toBeCloseTo(layout.x, 9);
+    expect(back.y).toBeCloseTo(layout.y, 9);
+    expect(back.z).toBeCloseTo(layout.z, 9);
+    d.reset();
+    expect(d.toWorld(layout).x).toBeCloseTo(layout.x, 9);
   });
 });

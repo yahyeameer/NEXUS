@@ -23,6 +23,8 @@ export interface PanelContent {
   lines: PanelLine[];
   /** Rows of buttons, laid out bottom-up below the text. */
   rows: ButtonSpec[][];
+  /** Optional picture drawn under the first line (evidence windows). */
+  image?: { source: CanvasImageSource; aspect: number; caption?: string };
 }
 
 export interface PanelButton extends ButtonSpec {
@@ -130,7 +132,9 @@ export class Panel {
     const rows = [...this.content.rows];
     const textLines = this.layoutText();
     const textBottom = (MARGIN + (rows.length + 1) * (BUTTON_H + GAP)) * s;
-    const pages = paginate(textLines, canvas.height - textBottom - MARGIN * s);
+    const img = this.content.image;
+    const imgH = img ? Math.min((this.widthM - 2 * MARGIN) / img.aspect, this.heightM * 0.42) * s : 0;
+    const pages = paginate(textLines, canvas.height - textBottom - MARGIN * s - imgH);
     this.page = Math.min(this.page, pages.length - 1);
     if (pages.length > 1) {
       rows.push([
@@ -146,7 +150,14 @@ export class Panel {
     });
 
     let y = MARGIN * s;
+    let lineIndex = 0;
     for (const l of pages[this.page] ?? []) {
+      if (img && lineIndex === 1) {
+        const w = imgH * img.aspect;
+        ctx.drawImage(img.source, MARGIN * s, y, w, imgH);
+        y += imgH + 0.004 * s;
+      }
+      lineIndex++;
       const f = FONT[l.tone];
       ctx.font = `${f.weight} ${Math.round(f.size * s)}px system-ui, sans-serif`;
       ctx.textBaseline = "top";

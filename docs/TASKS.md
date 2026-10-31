@@ -43,11 +43,11 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 
 ## Phase 5 — Spatial findings + voices (Nov 9 – Nov 13)
 
-- [ ] Anchored finding cards, evidence windows, evidence beams
-- [ ] Agent orbs + spatial voices (HRTF) + ducking
+- [ ] Anchored finding cards, evidence windows, evidence beams _(cards and evidence windows done; beams not yet)_
+- [ ] Agent orbs + spatial voices (HRTF) + ducking _(orbs done; spatial voices wait on a TTS provider, since speechSynthesis cannot be positioned)_
 - [ ] Grounded Q&A (voice + chips) and provenance answers
 - [x] Review by poke + voice; rationale stored verbatim; Logbook
-- [ ] Marker visual + audio states
+- [ ] Marker visual + audio states _(visual ring states done; audio cues not yet)_
 - [ ] Precomputed mode for all 3 sites + pre-generated audio _(precomputed research done for all 3 sites; audio waits on the TTS provider)_
 - [ ] ⏳ Evidence Debate (only if on schedule)
 

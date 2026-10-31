@@ -18,6 +18,9 @@ head and both hands with mouse and keyboard. Pair with code `1234`, or set `NEXU
 | Select a feature | Point the right hand's ray at a glowing ring and pinch |
 | Press a button | Poke it with the right index fingertip, or ray + pinch |
 | Open the wrist menu | Turn the left palm up or toward your face |
+| Turn or zoom the terrain | Pinch on the terrain and drag sideways to turn it. Pinch with both hands and spread or squeeze to zoom. The wrist menu also has Turn, Zoom and Reset buttons |
+| Open evidence | On a finding card poke **Evidence**, then a chip. The source opens beside the card with its credit, licence and image crop |
+| Describe what you see | After selecting, poke descriptor chips. They are saved with the observation as your words |
 | Talk (optional) | Hold **Hold to talk** on the wrist menu. Your desktop mic streams while held. Type your words in the **Simulated speech** box before you release, since no STT provider is chosen yet |
 
 Query options:
@@ -36,7 +39,7 @@ passthrough (`immersive-ar`) session when the headset supports it, so the dioram
 
 ## Tests
 
-- `pnpm test` runs the pure logic: tile↔scene mapping, feature picking, the poke state machine, PCM encoding and finding cards.
+- `pnpm test` runs the pure logic: tile↔scene mapping, feature picking, the poke state machine, terrain gestures, PCM encoding and finding cards.
 - `pnpm test:e2e` runs Playwright against the full emulator stack. The tests move IWER's emulated hands through its
   remote-control API: fingertip presses on panel buttons, ray + pinch on terrain features, and palm-up for the wrist
   menu. They never call app handlers, so a passing run means the flow works with hands only. Stop `pnpm dev:xr` first,
@@ -57,6 +60,6 @@ src/net/, src/audio/  API + event stream, voice gateway socket, push-to-talk mic
 
 ## Not yet in this client
 
-Grab, rotate and zoom the terrain; the immersive mode; the video panel; debate; whisper mode; descriptor chips on
-selection; agent orbs with spatial (HRTF) voices; the evidence windows. These follow the later milestones in
-`docs/TASKS.md`.
+Grab-and-move of the terrain; the immersive mode; the video panel; debate; whisper mode; suggested-question chips;
+spatial (HRTF) voices; evidence beams; audio cues for ring states; the offline precomputed bundle inside the client.
+These follow the later milestones in `docs/TASKS.md`.

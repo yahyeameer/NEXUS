@@ -15,6 +15,10 @@ export interface XrState {
   findings: Record<string, { id: string; status: string }>;
   captions: string[];
   lastCommand?: string;
+  view: { yaw: number; scale: number };
+  descriptors: string[];
+  evidenceOpen?: string;
+  orbs: number;
 }
 
 interface Hooks {
@@ -36,7 +40,7 @@ export function state(page: Page): Promise<XrState> {
   return page.evaluate(() => (window as unknown as HookWindow).__nexus.state());
 }
 
-async function remote(page: Page, method: string, params: Record<string, unknown>): Promise<unknown> {
+export async function remote(page: Page, method: string, params: Record<string, unknown>): Promise<unknown> {
   return page.evaluate(([m, p]) => (window as unknown as HookWindow).__nexus.remote(m, p), [method, params] as const);
 }
 
@@ -85,4 +89,20 @@ export async function pair(page: Page, code = "1234"): Promise<void> {
   for (const d of code) await poke(page, `main/pair:${d}`);
   await poke(page, "main/pair:go");
   await expect.poll(async () => (await state(page)).screen).toBe("welcome");
+}
+
+/** First visible target whose name starts with `prefix` (e.g. an evidence chip whose id comes from the data). */
+export async function firstTarget(page: Page, prefix: string): Promise<string> {
+  await expect.poll(async () => (await page.evaluate(() => (window as unknown as HookWindow).__nexus.targets())).some((t) => t.startsWith(prefix))).toBe(true);
+  const all = await page.evaluate(() => (window as unknown as HookWindow).__nexus.targets());
+  return all.find((t) => t.startsWith(prefix)) ?? prefix;
+}
+
+/** Pinch on a target and drag the hand sideways while holding: turns the terrain instead of selecting. */
+export async function pinchDrag(page: Page, target: string, dx: number): Promise<void> {
+  await waitForTarget(page, target);
+  expect(await page.evaluate((n) => (window as unknown as HookWindow).__nexus.aim(n), target)).toBe(true);
+  await remote(page, "set_select_value", { device: "hand-right", value: 1 });
+  await remote(page, "animate_to", { device: "hand-right", position: { x: 0.12 + dx, y: 1.02, z: -0.25 }, duration: 0.6 });
+  await remote(page, "set_select_value", { device: "hand-right", value: 0 });
 }

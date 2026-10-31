@@ -1,6 +1,6 @@
 // AGENTS.md rule 1: the whole loop is completable with hands alone. No voice, no keyboard, no mouse inside XR.
 import { expect, test } from "@playwright/test";
-import { enterXr, pair, palmUp, pinchAt, poke, state } from "./emulator.js";
+import { enterXr, firstTarget, pair, palmUp, pinchAt, poke, state } from "./emulator.js";
 
 test("pair, select, investigate, review and read the logbook with hands only", async ({ page }) => {
   await enterXr(page);
@@ -12,12 +12,26 @@ test("pair, select, investigate, review and read the logbook with hands only", a
   // Ray + pinch on the rille's ring selects it; Investigate sends it to the (precomputed) research team.
   await pinchAt(page, "feature/HADLEY_RILLE");
   await expect.poll(async () => (await state(page)).selectedFeatureId).toBe("HADLEY_RILLE");
+  // Descriptor chips record what the scientist sees, by hand.
+  await poke(page, "main/desc:Sinuous");
+  await expect.poll(async () => (await state(page)).descriptors).toEqual(["Sinuous"]);
   await poke(page, "main/sel:investigate");
+  // Agent orbs appear over the feature while the team works.
+  await expect.poll(async () => (await state(page)).orbs).toBeGreaterThan(0);
 
   // The finding arrives only after the SIE accepted it for review, and its approved briefing is captioned.
   await expect.poll(async () => (await state(page)).findings.HADLEY_RILLE?.status, { timeout: 60_000 }).toBe("ready_for_review");
   expect((await state(page)).screen).toBe("finding");
   await expect.poll(async () => (await state(page)).captions.join(" ")).toContain("The LROC terrain model gives about 308 metres");
+
+  // Evidence window: open the first cited item beside the card, then close it.
+  await poke(page, "main/card:evidence");
+  const chip = await firstTarget(page, "main/ev:");
+  await poke(page, chip);
+  await expect.poll(async () => (await state(page)).evidenceOpen).toBe(chip.slice("main/ev:".length));
+  await poke(page, "evidence/evwin:close");
+  await expect.poll(async () => (await state(page)).evidenceOpen).toBeUndefined();
+  await poke(page, "main/back:finding");
 
   // Reject with a reason chip: the chip text is stored verbatim as the rationale.
   await poke(page, "main/card:reject");

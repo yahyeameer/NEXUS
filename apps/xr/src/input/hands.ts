@@ -4,6 +4,8 @@ import { BufferGeometry, Line, LineBasicMaterial, Mesh, MeshBasicMaterial, Quate
 import type { Group, Object3D, WebGLRenderer, XRHandSpace, XRTargetRaySpace } from "three";
 import { XRHandModelFactory } from "three/addons/webxr/XRHandModelFactory.js";
 import type { Panel } from "../ui/panel.js";
+import { isTap, TAP_MAX_MOVE_M, yawDelta } from "./manipulate.js";
+import type { Point2 } from "./manipulate.js";
 import { PokeTracker } from "./poke.js";
 
 export type Handedness = "left" | "right";
@@ -13,6 +15,10 @@ export interface InputHooks {
   terrain: () => Object3D | undefined;
   button: (panel: Panel, id: string, edge: "press" | "release", via: "poke" | "ray") => void;
   terrainSelect: (point: Vector3) => void;
+  /** Table centre the diorama turns about. */
+  pivot: () => Point2;
+  /** Pinch + drag on the terrain: yaw in radians, or a two-hand zoom as the change in hand separation. */
+  manipulate: (m: { yaw?: number; zoom?: { fromM: number; toM: number } }) => void;
 }
 
 export interface RayHit {
@@ -28,6 +34,8 @@ interface Slot {
   cursor: Mesh;
   pokes: Map<Panel, PokeTracker>;
   rayHeld?: { panel: Panel; id: string };
+  /** A pinch that started on the terrain: a tap selects, a drag turns or zooms. */
+  grab?: { point: Vector3; start: Vector3; last: Vector3; maxMove: number; dragging: boolean };
   hit: RayHit;
 }
 
@@ -36,6 +44,9 @@ const RAY_LENGTH_M = 3;
 const tmpTip = new Vector3();
 const tmpDir = new Vector3();
 const tmpQuat = new Quaternion();
+const tmpHand = new Vector3();
+const tmpA = new Vector3();
+const tmpB = new Vector3();
 
 export class HandInput {
   private readonly slots: Slot[] = [];
@@ -77,6 +88,35 @@ export class HandInput {
     for (const slot of this.slots) {
       this.updatePokes(slot, panels);
       this.updateRay(slot, panels);
+    }
+    this.updateGrabs();
+  }
+
+  private updateGrabs(): void {
+    const grabbing = this.slots.filter((s) => s.grab);
+    for (const slot of grabbing) {
+      const g = slot.grab;
+      if (!g) continue;
+      slot.ray.getWorldPosition(tmpHand);
+      g.maxMove = Math.max(g.maxMove, tmpHand.distanceTo(g.start));
+      if (g.maxMove >= TAP_MAX_MOVE_M) g.dragging = true;
+    }
+    const [a, b] = grabbing;
+    if (a?.grab && b?.grab) {
+      // Two-hand pinch: zoom by the change in distance between the hands.
+      const pa = a.ray.getWorldPosition(tmpA);
+      const pb = b.ray.getWorldPosition(tmpB);
+      const fromM = a.grab.last.distanceTo(b.grab.last);
+      const toM = pa.distanceTo(pb);
+      if (a.grab.dragging || b.grab.dragging) this.hooks.manipulate({ zoom: { fromM, toM } });
+      a.grab.last.copy(pa);
+      b.grab.last.copy(pb);
+      return;
+    }
+    if (a?.grab) {
+      const now = a.ray.getWorldPosition(tmpA);
+      if (a.grab.dragging) this.hooks.manipulate({ yaw: yawDelta(this.hooks.pivot(), a.grab.last, now) });
+      a.grab.last.copy(now);
     }
   }
 
@@ -163,10 +203,14 @@ export class HandInput {
       this.hooks.button(hit.panel, hit.buttonId, "press", "ray");
       return;
     }
-    this.hooks.terrainSelect(hit.point.clone());
+    const start = slot.ray.getWorldPosition(new Vector3());
+    slot.grab = { point: hit.point.clone(), start, last: start.clone(), maxMove: 0, dragging: false };
   }
 
   private selectEnd(slot: Slot): void {
+    const grab = slot.grab;
+    slot.grab = undefined;
+    if (grab && !grab.dragging && isTap(grab.maxMove)) this.hooks.terrainSelect(grab.point);
     const held = slot.rayHeld;
     if (!held) return;
     slot.rayHeld = undefined;
