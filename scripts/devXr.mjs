@@ -14,13 +14,16 @@ const env = {
 };
 delete env.DATABASE_URL;
 
+const isWindows = process.platform === "win32";
+
 const procs = [
   ["api", ["--filter", "@nexus/api", "start"]],
   ["orchestrator", ["--filter", "@nexus/orchestrator", "start"]],
   ["voice", ["--filter", "@nexus/voice-gateway", "start"]],
   ["xr", ["--filter", "@nexus/xr", "dev"]],
 ].map(([name, args]) => {
-  const p = spawn("pnpm", args, { env, stdio: ["ignore", "pipe", "pipe"] });
+  // On Windows pnpm is a .cmd shim, which spawn can only run through a shell.
+  const p = spawn("pnpm", args, { env, stdio: ["ignore", "pipe", "pipe"], shell: isWindows });
   const prefix = (chunk) =>
     chunk
       .toString()
@@ -42,7 +45,11 @@ let stopping = false;
 function shutdown(code) {
   if (stopping) return;
   stopping = true;
-  for (const p of procs) p.kill("SIGTERM");
+  for (const p of procs) {
+    // A shell wrapper hides the real process on Windows, so end the whole tree.
+    if (isWindows && p.pid) spawn("taskkill", ["/pid", String(p.pid), "/T", "/F"], { stdio: "ignore" });
+    else p.kill("SIGTERM");
+  }
   setTimeout(() => process.exit(code), 500);
 }
 process.on("SIGINT", () => shutdown(0));
