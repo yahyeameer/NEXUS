@@ -14,7 +14,8 @@ async function screenPoint(page: Page, name: string): Promise<{ x: number; y: nu
 }
 
 test("pair, pick a feature, turn and zoom the terrain with mouse and keyboard only", async ({ page }) => {
-  await page.goto("/");
+  // Mons Hadley Delta, so this flow's finding never collides with the hands-only flow on Hadley Rille and Elbow (one server, shared state).
+  await page.goto("/?site=HADLEY_DELTA");
   await expect.poll(() => page.evaluate(() => (window as unknown as ScreenWindow).__nexus?.targets().length ?? 0)).toBeGreaterThan(0);
 
   for (const digit of ["1", "2", "3", "4"]) await page.keyboard.press(digit);
@@ -24,21 +25,22 @@ test("pair, pick a feature, turn and zoom the terrain with mouse and keyboard on
   await expect.poll(async () => (await state(page)).screen).toBe("idle");
 
   // Hover then click the glowing ring: the mouse ray picks it exactly as a pinch would.
-  const ring = await screenPoint(page, "feature/HADLEY_RILLE");
+  const ring = await screenPoint(page, "feature/HADLEY_DELTA_SLOPE");
   await page.mouse.move(ring.x, ring.y);
   await page.waitForTimeout(800);
   await page.mouse.down();
   await page.waitForTimeout(150);
   await page.mouse.up();
-  await expect.poll(async () => (await state(page)).selectedFeatureId).toBe("HADLEY_RILLE");
+  await expect.poll(async () => (await state(page)).selectedFeatureId).toBe("HADLEY_DELTA_SLOPE");
 
   // Drag across the terrain to turn it, wheel to zoom.
   const before = await state(page);
-  // Across the ring, which is terrain whatever the window size; the docked menus sit at the edges.
-  await page.mouse.move(ring.x - 60, ring.y + 15);
+  // From the ring outwards (a pinch-drag that starts on a feature turns the terrain, as by hand); the docked menus
+  // sit at the window edges, so the drag stays clear of them whatever the window size.
+  await page.mouse.move(ring.x, ring.y);
   await page.waitForTimeout(300);
   await page.mouse.down();
-  await page.mouse.move(ring.x + 80, ring.y + 15, { steps: 12 });
+  await page.mouse.move(ring.x + 120, ring.y, { steps: 12 });
   await page.mouse.up();
   await expect.poll(async () => Math.abs((await state(page)).view.yaw - before.view.yaw)).toBeGreaterThan(0.1);
   await page.mouse.wheel(0, -300);
@@ -51,7 +53,7 @@ test("pair, pick a feature, turn and zoom the terrain with mouse and keyboard on
   // Investigate, then open evidence from the card's lowest row: the click must land on the panel drawn over the
   // terrain, not on the diorama corner behind it.
   await page.keyboard.press("Enter");
-  await expect.poll(async () => (await state(page)).findings.HADLEY_RILLE?.status, { timeout: 60_000 }).toBe("ready_for_review");
+  await expect.poll(async () => (await state(page)).findings.HADLEY_DELTA_SLOPE?.status, { timeout: 60_000 }).toBe("ready_for_review");
   await click(page, "main/card:evidence");
   await expect.poll(async () => (await state(page)).screen).toBe("evidence");
   const chip = await page.evaluate(() => (window as unknown as ScreenWindow).__nexus?.targets().find((t) => t.startsWith("main/ev:")));
