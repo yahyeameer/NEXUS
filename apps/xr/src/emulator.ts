@@ -5,11 +5,14 @@ import type { TargetResolver } from "iwer";
 import { Matrix4, Quaternion, Vector3 } from "three";
 import type { NexusApp } from "./app.js";
 import { simulatedSpeechBox } from "./web/simulatedSpeech.js";
+import type { VoiceBox } from "./web/simulatedSpeech.js";
 
 export interface Emulator {
   device: XRDevice;
   /** The desktop stand-in for speech until an STT provider is chosen (services/voice-gateway NEXUS_SIMULATED_STT). */
   takeSimulatedTranscript: () => string | undefined;
+  /** The desktop voice window that holds the typed stand-in and mirrors the voice state. */
+  voiceBox: VoiceBox;
 }
 
 export async function installEmulator(opts: { devUi: boolean; desktop?: boolean }): Promise<Emulator> {
@@ -28,7 +31,8 @@ export async function installEmulator(opts: { devUi: boolean; desktop?: boolean 
     const { DevUI } = await import("@iwer/devui");
     device.installDevUI(DevUI);
   }
-  return { device, takeSimulatedTranscript: simulatedSpeechBox() };
+  const voiceBox = simulatedSpeechBox();
+  return { device, takeSimulatedTranscript: () => voiceBox.take(), voiceBox };
 }
 
 /** Lets IWER's hand sequences ("press main/card:approve") find the app's buttons and features. */

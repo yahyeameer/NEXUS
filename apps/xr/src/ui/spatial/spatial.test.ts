@@ -6,6 +6,7 @@ import { evidenceContent } from "./evidenceViewer.js";
 import { outlinePath } from "./rockSelectionOutline.js";
 import { arcPoint } from "./spatialConnector.js";
 import { statusLabel } from "./statusIndicator.js";
+import { voiceLines } from "./voicePanel.js";
 
 const FORBIDDEN = /\b(confirmed|discovered|proven)\b/i;
 const base = { siteId: "TEST_SITE", label: "x", spokenLabel: "x", aliases: [] };
@@ -114,5 +115,26 @@ describe("EvidenceViewer content", () => {
   it("says so when the evidence is not in the store, rather than inventing it", () => {
     const c = evidenceContent("EV-404", [item], [measurement]);
     expect(c.lines[1]).toMatchObject({ tone: "warn" });
+  });
+});
+
+describe("VoicePanel lines", () => {
+  it("names the state, then the newest caption above the one before it", () => {
+    expect(voiceLines("idle", undefined, [])).toEqual([
+      { text: "VOICE · hold to talk on the wrist menu", tone: "muted" },
+      { text: "Captions appear here.", tone: "muted" },
+    ]);
+    expect(voiceLines("listening", undefined, ["a", "b", "c"]).map((l) => l.text)).toEqual(["LISTENING · release to send", "c", "b"]);
+    expect(voiceLines("speaking", "LROC imagery researcher", ["You: hi", "LROC imagery researcher: I investigated"])[0]).toEqual({
+      text: "LROC IMAGERY RESEARCHER · SPEAKING",
+      tone: "title",
+    });
+  });
+
+  it("adds no words of its own beyond the state label and never claims a result", () => {
+    for (const mode of ["idle", "listening", "speaking"] as const) {
+      const text = voiceLines(mode, "Narrator", []).map((l) => l.text).join(" ");
+      expect(text).not.toMatch(FORBIDDEN);
+    }
   });
 });
