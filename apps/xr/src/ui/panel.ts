@@ -214,13 +214,16 @@ export class Panel {
       fill.addColorStop(0, c.top);
       fill.addColorStop(1, c.bottom);
       if (hot) {
-        ctx.shadowColor = c.rim;
-        ctx.shadowBlur = 0.012 * s;
+        // A wider translucent rim reads as a glow; canvas shadowBlur does too but costs far more on every hover change.
+        ctx.fillStyle = c.rim;
+        ctx.globalAlpha = 0.35;
+        roundRect(ctx, px - 0.004 * s, py - 0.004 * s, bw + 0.008 * s, bh + 0.008 * s, 0.014 * s);
+        ctx.fill();
+        ctx.globalAlpha = 1;
       }
       ctx.fillStyle = fill;
       roundRect(ctx, px, py, bw, bh, 0.01 * s);
       ctx.fill();
-      ctx.shadowBlur = 0;
       ctx.lineWidth = (hot ? 0.0018 : 0.001) * s;
       ctx.strokeStyle = hot ? "#ffffff" : c.rim;
       ctx.globalAlpha = hot ? 1 : 0.55;

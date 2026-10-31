@@ -4,7 +4,8 @@ import { defineConfig } from "@playwright/test";
 // emulated hands, so every flow here is completed hands-only unless the test is about the voice shortcut.
 export default defineConfig({
   testDir: "e2e",
-  timeout: 240_000,
+  // Software WebGL on CI runs the long hands-only flow at a few frames per second, so each flow gets generous time.
+  timeout: 480_000,
   expect: { timeout: 30_000 },
   workers: 1,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
