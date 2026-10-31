@@ -76,6 +76,7 @@ export class HandInput {
       const slot: Slot = { ray, hand, line, cursor, model, pokes: new Map(), hit: { onUi: false } };
       ray.addEventListener("connected", (e) => {
         slot.handedness = e.data.handedness === "left" ? "left" : "right";
+        ray.userData.handedness = slot.handedness;
       });
       ray.addEventListener("disconnected", () => {
         slot.handedness = undefined;

@@ -10,8 +10,8 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 - [ ] Confirm Muse access + `ReasoningAdapter`; confirm Jev access + `DecisionAdapter` (fallback policy if not available)
 - [ ] STT/TTS provider bake-off on Quest: latency, word timestamps, languages → pick
 - [ ] Test `speechSynthesis` and `getUserMedia` behaviour in Quest Browser
-- [ ] IWSDK app boots on Quest over HTTPS; hand tracking + passthrough on _(Three.js WebXR client boots in the IWER emulator with hands, and requests passthrough on Quest; not yet checked on a device)_
-- [ ] Export first DEM + texture from Moon Trek; render tile on desk _(DEM + texture from the LROC NAC DTM in PDS instead of Moon Trek, rendered as the tabletop diorama in the emulator; desk placement on a device not yet checked)_
+- [ ] IWSDK app boots on Quest over HTTPS; hand tracking + passthrough on _(Three.js WebXR client boots in the IWER emulator with hands; on a device it opens an `immersive-ar` session with hit-test placement, anchors and the NASA Moon globe (apps/xr README "The flow"); not yet checked on a device)_
+- [ ] Export first DEM + texture from Moon Trek; render tile on desk _(DEM + texture from the LROC NAC DTM in PDS instead of Moon Trek, rendered as the tabletop model; placed on a real surface by AR hit-test, tested in the emulator with a stand-in plane; desk placement on a device not yet checked)_
 - [x] `packages/schemas` with all models from DATA_MODELS.md
 
 ## Phase 2 — Observation + voice capture (Nov 1 – Nov 5)

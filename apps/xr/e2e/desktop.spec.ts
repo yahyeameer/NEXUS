@@ -16,6 +16,9 @@ async function screenPoint(page: Page, name: string): Promise<{ x: number; y: nu
 test("pair, pick a feature, turn and zoom the terrain with mouse and keyboard only", async ({ page }) => {
   // Mons Hadley Delta, so this flow's finding never collides with the hands-only flow on Hadley Rille and Elbow (one server, shared state).
   await page.goto("/?site=HADLEY_DELTA");
+  // No AR in a desktop browser: the launch screen says so and offers the 3D viewer.
+  await expect(page.locator("#enter-ar")).toBeDisabled();
+  await page.locator("#enter-3d").click();
   await expect.poll(() => page.evaluate(() => (window as unknown as ScreenWindow).__nexus?.targets().length ?? 0)).toBeGreaterThan(0);
 
   for (const digit of ["1", "2", "3", "4"]) await page.keyboard.press(digit);

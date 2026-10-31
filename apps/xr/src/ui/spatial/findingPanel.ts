@@ -29,6 +29,13 @@ export class ScientificFindingPanel extends SpatialGlassPanel {
     this.place(dock, face);
   }
 
+  /** New reading spot after the explorer is placed or moved (ar/stage.ts view frame). */
+  setDock(dock: Vector3, face: Vector3): void {
+    this.dock.copy(dock);
+    this.face.copy(face);
+    this.place(dock, face);
+  }
+
   /**
    * Attaches the card to `featureId` at `anchorWorld`. A new feature makes the card rise from it and glide back to
    * the dock; `undefined` detaches it and the connector fades.

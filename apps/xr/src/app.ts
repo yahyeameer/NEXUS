@@ -1,9 +1,19 @@
-// The headset app: one tabletop site at a time, a main panel (selection → research → finding card → review),
-// a captions strip and a wrist menu. Every action is reachable by poke or ray + pinch; voice only shortcuts them
+// The AR app: the scientist places NASA's Moon on a real surface, opens a surveyed region as a tabletop terrain
+// model, and works it with a main panel (selection → research → finding card → review), a captions strip and a
+// wrist menu. Every action is reachable by poke or ray + pinch; voice only shortcuts them
 // (AGENTS.md rule 1, INTERACTION.md §1 parity table).
 import type { EvidenceItem, MeasurementRecord, NexusEvent, ReviewDecision, ScientificFinding, TerrainFeature, VoiceServerMessage } from "@nexus/schemas";
 import type { Command } from "@nexus/voice";
 import { Vector3 } from "three";
+import { PlacementController } from "./ar/placementController.js";
+import type { PlacementStatus } from "./ar/placementController.js";
+import type { SurfaceSource } from "./ar/surfaceDetection.js";
+import { DEFAULT_STAGE, viewToWorld } from "./ar/stage.js";
+import type { StagePose } from "./ar/stage.js";
+import type { Vec3 } from "./scene/tabletop.js";
+import { MOON_CREDIT, angularDistanceDeg, modelToLatLon } from "./planet/moonModel.js";
+import { PlanetaryEnvironment } from "./planet/planetaryEnvironment.js";
+import type { EnvironmentMode } from "./planet/planetaryEnvironment.js";
 import { PushToTalkMic } from "./audio/mic.js";
 import { Speaker } from "./audio/speaker.js";
 import type { Utterance } from "./audio/speaker.js";
@@ -13,7 +23,6 @@ import { ApiClient } from "./net/api.js";
 import type { LogbookEntry } from "./net/api.js";
 import { VoiceClient } from "./net/voice.js";
 import { zoomedScale } from "./input/manipulate.js";
-import { Diorama } from "./scene/diorama.js";
 import { pickFeature } from "./scene/featurePick.js";
 import { AgentOrbs } from "./scene/orbs.js";
 import { sceneToTile } from "./scene/tabletop.js";
@@ -34,7 +43,7 @@ import {
 } from "./ui/spatial/index.js";
 import type { ButtonSpec, MarkerState, PanelContent, PanelLine } from "./ui/spatial/index.js";
 
-type Screen = "pair" | "welcome" | "idle" | "selected" | "researching" | "finding" | "reason" | "sources" | "evidence" | "logbook" | "clarify";
+type Screen = "pair" | "welcome" | "globe" | "idle" | "selected" | "researching" | "finding" | "reason" | "sources" | "evidence" | "logbook" | "clarify";
 
 export interface AppOptions {
   emulated: boolean;
@@ -43,6 +52,9 @@ export interface AppOptions {
   /** Emulator only: what the desktop user typed as "speech" for the current push-to-talk. */
   simulatedTranscript?: () => string | undefined;
 }
+
+/** How the explorer is being shown: a real AR session, or the 3D viewer fallback (no camera, no AR). */
+export type ExperienceMode = "ar" | "viewer";
 
 /** Snapshot for the emulator's test hooks and the desktop status line. */
 export interface AppState {
@@ -60,7 +72,21 @@ export interface AppState {
   descriptors: string[];
   evidenceOpen?: string;
   orbs: number;
+  ar: PlacementStatus & { mode: ExperienceMode; environment: EnvironmentMode; regionMarked: boolean };
 }
+
+/** Default seated layout (INTERACTION.md §3); ar/stage.ts moves it to wherever the explorer is placed. */
+const LAYOUT = {
+  face: { x: 0, y: 1.2, z: 0 },
+  main: { x: 0.38, y: 1.0, z: -0.42 },
+  captions: { x: 0.38, y: 0.7, z: -0.42 },
+  evidence: { x: -0.4, y: 1.1, z: -0.46 },
+  wristDock: { x: -0.42, y: 0.76, z: -0.22 },
+  /** Placement guide: ahead and a little below eye level, out of the way of the surface being searched. */
+  guide: { x: 0, y: 1.02, z: -0.55 },
+} as const;
+/** A pinch within this angle of the globe's region marker opens the region. */
+const GLOBE_PICK_DEG = 9;
 
 /** Ray hits within this many tile metres of a feature footprint select it. */
 const PICK_TOLERANCE_M = 120;
@@ -77,9 +103,11 @@ const DESCRIPTOR_CHIPS: Record<TerrainFeature["kind"], string[]> = {
 
 export class NexusApp {
   /** Main card, docked to the front right, about 60 cm away, top edge below eye level, turned to the seated user (INTERACTION.md §3). */
-  readonly main = new ScientificFindingPanel(new Vector3(0.38, 1.0, -0.42), new Vector3(0, 1.2, 0));
+  readonly main = new ScientificFindingPanel(v(LAYOUT.main), v(LAYOUT.face));
   readonly captions = new SpatialGlassPanel("captions", 0.4, 0.07, false);
-  readonly wrist = new SpatialGlassPanel("wrist", 0.18, 0.31);
+  readonly wrist = new SpatialGlassPanel("wrist", 0.18, 0.37);
+  /** Placement guide while searching for a surface: what to do, and what the device found. Display only. */
+  readonly guide = new SpatialGlassPanel("guide", 0.32, 0.17, false);
   /** Evidence window, opened from a finding card (INTERACTION.md "Open evidence: poke evidence chip"). */
   readonly evidence = new EvidenceViewer();
   /** Which agents are at work, floating over the feature under investigation. */
@@ -89,7 +117,16 @@ export class NexusApp {
   private readonly scratch = new Vector3();
   private readonly scratchB = new Vector3();
   private lastFrame = 0;
-  readonly diorama = new Diorama();
+  /** Globe or region on the placed surface; the Diorama inside it carries placement, turn and zoom. */
+  readonly env = new PlanetaryEnvironment();
+  readonly diorama = this.env.diorama;
+  readonly placement: PlacementController;
+  private experience: ExperienceMode = "viewer";
+  private stage: StagePose = DEFAULT_STAGE;
+  private hoverMarker = false;
+  private guidePlaced = false;
+  /** Phone touch gestures: a drag or pinch on the overlay must not also count as a tap. */
+  private selectGuard?: () => boolean;
   private readonly orbs = new AgentOrbs();
   readonly api = new ApiClient();
   readonly input: HandInput;
@@ -121,28 +158,36 @@ export class NexusApp {
   private readonly head = new Vector3();
   private readonly headDir = new Vector3();
   private readonly listeners = new Set<() => void>();
+  private desktop = false;
 
   constructor(
     private readonly world: World,
     private readonly opts: AppOptions,
   ) {
     const { scene } = world;
-    const face = new Vector3(0, 1.2, 0);
-    this.captions.place(new Vector3(0.38, 0.7, -0.42), face);
-    // Evidence opens to the front left, mirroring the card, so both can be read side by side.
-    this.evidence.place(new Vector3(-0.4, 1.1, -0.46), face);
-    scene.add(this.main.mesh, this.captions.mesh, this.wrist.mesh, this.evidence.mesh, this.agents.mesh, this.diorama.pivot);
+    scene.add(this.main.mesh, this.captions.mesh, this.wrist.mesh, this.evidence.mesh, this.agents.mesh, this.guide.mesh, this.diorama.pivot);
     scene.add(this.main.connector.object, this.evidence.beam.object);
+    this.guide.close();
+    this.applyStage(DEFAULT_STAGE);
+    this.placement = new PlacementController(world.renderer, scene, {
+      placed: (stage) => this.applyStage(stage),
+      changed: () => this.onPlacementChanged(),
+      allowSelect: () => !(this.selectGuard?.() ?? false),
+    });
 
     this.input = new HandInput(world.renderer, scene, {
-      panels: () => [this.main, this.captions, this.wrist, this.evidence],
-      terrain: () => this.site?.terrain,
+      panels: () => this.interactivePanels(),
+      terrain: () => (this.placing ? undefined : this.env.pickable(this.site?.terrain)),
       button: (panel, id, edge, via) => this.onButton(panel, id, edge, via),
-      terrainSelect: (p) => this.onTerrainSelect(p),
+      terrainSelect: (p) => {
+        if (this.selectGuard?.()) return;
+        if (this.env.mode === "globe") this.onGlobeSelect(p);
+        else this.onTerrainSelect(p);
+      },
       pivot: () => this.diorama.pivotPoint,
       manipulate: (m) => {
         // A mouse drag moves the emulated hand less than a real arm would, so desktop mode turns the terrain faster.
-        if (m.yaw !== undefined) this.diorama.rotateBy(m.yaw * (opts.desktop ? 1.6 : 1));
+        if (m.yaw !== undefined) this.diorama.rotateBy(m.yaw * (this.desktop ? 1.6 : 1));
         if (m.zoom) this.diorama.setScale(zoomedScale(this.diorama.scale, m.zoom.fromM, m.zoom.toM));
       },
     });
@@ -154,7 +199,8 @@ export class NexusApp {
         this.reportPlayback(kind, u);
       },
     });
-    this.input.setDesktop(opts.desktop === true);
+    this.desktop = opts.desktop === true;
+    this.input.setDesktop(this.desktop);
     this.render();
     this.renderCaptions();
     this.renderWrist();
@@ -168,6 +214,23 @@ export class NexusApp {
       return true;
     }
     return false;
+  }
+
+  /** Toolbar and keyboard: run a button's action whether or not its panel is open (same ids as the panels). */
+  act(id: string): void {
+    this.onButton(this.wrist, id, "press", "ray");
+  }
+
+  /** Touch twist and drag on a phone. */
+  rotateBy(radians: number): void {
+    this.diorama.rotateBy(radians);
+    this.changed();
+  }
+
+  /** The 3D viewer drives the emulated hand with a mouse: hide hand models, dock the wrist menu. */
+  setDesktop(desktop: boolean): void {
+    this.desktop = desktop;
+    this.input.setDesktop(desktop);
   }
 
   /** Smooth zoom for the mouse wheel; the wrist menu's Zoom buttons take fixed steps. */
@@ -197,18 +260,151 @@ export class NexusApp {
       descriptors: [...this.descriptors],
       evidenceOpen: this.evidenceOpen,
       orbs: this.orbs.count,
+      ar: { ...this.placement.status(), mode: this.experience, environment: this.env.mode, regionMarked: this.env.regionMark !== undefined },
     };
+  }
+
+  // --- AR placement and the environment -----------------------------------------------------------
+
+  private get placing(): boolean {
+    return this.placement.phase === "placing";
+  }
+
+  /**
+   * Starts the explorer in a session. `surface` is the hit-test source (undefined: none). The 3D viewer and devices
+   * without hit-test place at once; AR with hit-test waits for the scientist to tap a surface.
+   */
+  beginSession(session: XRSession, mode: ExperienceMode, surface: SurfaceSource | undefined, anchors: boolean, fixedAt?: Vec3): void {
+    this.experience = mode;
+    this.placement.attach(session, surface, anchors);
+    this.placement.setFootprint(this.env.footprintM());
+    // A fixed spot is the seated default layout, so the stage is known before the first frame.
+    if (fixedAt) this.placement.placeFixed(v(fixedAt), { ...DEFAULT_STAGE, surface: { ...fixedAt } });
+    else this.startPlacing();
+    session.addEventListener("end", () => {
+      this.placement.detach();
+      this.onPlacementChanged();
+    });
+  }
+
+  /** Touch gestures report here, so the select at the end of a drag is not taken as a tap. */
+  guardSelect(fn: () => boolean): void {
+    this.selectGuard = fn;
+  }
+
+  private startPlacing(): void {
+    this.guidePlaced = false;
+    this.placement.reposition();
+    this.onPlacementChanged();
+  }
+
+  /** Guide placed once in front of the viewer (world-anchored, not head-locked) once their pose is known. */
+  private placeGuide(): void {
+    this.guidePlaced = true;
+    const cam = this.world.renderer.xr.getCamera();
+    cam.getWorldPosition(this.head);
+    cam.getWorldDirection(this.headDir);
+    const yaw = Math.atan2(-this.headDir.x, -this.headDir.z);
+    const viewStage: StagePose = { surface: DEFAULT_STAGE.surface, yaw, head: { x: this.head.x, y: this.head.y, z: this.head.z } };
+    this.guide.place(v(viewToWorld(viewStage, LAYOUT.guide)), this.head.clone());
+    this.guide.open();
+  }
+
+  /** Re-dock everything for a new placement: the model on the surface, the panels in the viewer's frame. */
+  private applyStage(stage: StagePose): void {
+    this.stage = stage;
+    this.diorama.placeAt(stage.surface, stage.yaw);
+    const face = v(stage.head);
+    this.main.setDock(v(viewToWorld(stage, LAYOUT.main)), face);
+    this.captions.place(v(viewToWorld(stage, LAYOUT.captions)), face);
+    // Evidence opens to the front left, mirroring the card, so both can be read side by side.
+    this.evidence.place(v(viewToWorld(stage, LAYOUT.evidence)), face);
+    if (this.site && this.selected) this.syncSelection();
+  }
+
+  private onPlacementChanged(): void {
+    const placing = this.placing;
+    this.diorama.pivot.visible = !placing;
+    for (const p of [this.main, this.captions]) p.setOpen(!placing);
+    if (placing) {
+      this.evidence.close();
+      this.agents.close();
+      this.renderGuide();
+      if (this.guidePlaced) this.guide.open();
+    } else this.guide.close();
+    this.renderWrist();
+    this.changed();
+  }
+
+  private renderGuide(): void {
+    const s = this.placement.status();
+    const what = this.env.mode === "globe" ? "the Moon" : "the terrain model";
+    const lines: PanelLine[] = [{ text: `Place ${what}`, tone: "title" }];
+    if (s.surfaceFound) lines.push({ text: "Surface found. Pinch, or tap the screen, to place it on the ring.", tone: "body" });
+    else lines.push({ text: "Look at a table or the floor and move slowly while NEXUS finds a surface.", tone: "body" });
+    if (s.surface === "emulated-plane") lines.push({ text: "Emulator: a flat test surface stands in for the room.", tone: "muted" });
+    this.guide.set({ lines, rows: [] });
+  }
+
+  private interactivePanels(): SpatialGlassPanel[] {
+    return this.placing ? [] : [this.main, this.captions, this.wrist, this.evidence];
+  }
+
+  /** Show NASA's globe on the placed surface, with the surveyed region marked. */
+  showGlobe(): void {
+    this.selected = undefined;
+    this.descriptors.clear();
+    this.closeEvidence();
+    this.outline.hide();
+    this.beam.stop();
+    this.main.attach(undefined, undefined);
+    this.env.showGlobe();
+    this.placement.setFootprint(this.env.footprintM());
+    if (this.screen !== "pair" && this.screen !== "welcome") this.go("globe");
+    this.renderWrist();
+    this.changed();
+  }
+
+  /** Open a site's terrain on the same anchor as the globe. */
+  async openRegion(siteId: string): Promise<void> {
+    if (this.site?.siteId !== siteId) await this.loadSite(siteId);
+    this.env.showRegion(this.site?.group);
+    this.placement.setFootprint(this.env.footprintM());
+    if (this.screen !== "pair" && this.screen !== "welcome") this.go("idle");
+    this.renderWrist();
+    this.changed();
+  }
+
+  private onGlobeSelect(point: Vector3): void {
+    if (this.screen === "pair" || this.screen === "welcome") return;
+    const mark = this.env.regionMark;
+    if (mark && angularDistanceDeg(modelToLatLon(this.env.globeLatLon(point)), mark) <= GLOBE_PICK_DEG) {
+      void this.openRegion(this.site?.siteId ?? SITES[0].siteId);
+      return;
+    }
+    this.notice = "No NEXUS survey terrain there yet. The marked region holds the three demo sites.";
+    this.render();
   }
 
   /** Every visible button, in world space: the emulator's target resolver and e2e tests drive the hands to these. */
   targets(): { name: string; position: Vector3; normal: Vector3; size: Vector3 }[] {
     const out: { name: string; position: Vector3; normal: Vector3; size: Vector3 }[] = [];
-    for (const panel of [this.main, this.captions, this.wrist, this.evidence]) {
+    for (const panel of this.interactivePanels()) {
       if (!panel.mesh.visible) continue;
       for (const b of panel.buttons) {
         const w = panel.buttonWorld(b.id);
         if (w) out.push({ name: `${panel.name}/${b.id}`, ...w });
       }
+    }
+    if (this.placing) {
+      // Emulator tests aim the hand at the default table spot to find the emulated surface.
+      if (this.placement.status().surface === "emulated-plane") out.push({ name: "surface/table", position: v(DEFAULT_STAGE.surface), normal: new Vector3(0, 1, 0), size: new Vector3(0.2, 0.01, 0.2) });
+      return out;
+    }
+    if (this.env.mode === "globe") {
+      const m = this.env.markerWorld(new Vector3());
+      if (m) out.push({ name: "globe/region", position: m, normal: new Vector3(0, 1, 0), size: new Vector3(0.02, 0.02, 0.02) });
+      return out;
     }
     for (const [id, a] of this.site?.anchors ?? []) out.push({ name: `feature/${id}`, position: this.diorama.toWorld(a), normal: new Vector3(0, 1, 0), size: new Vector3(0.05, 0.01, 0.05) });
     return out;
@@ -216,7 +412,7 @@ export class NexusApp {
 
   async loadSite(siteId: string): Promise<void> {
     const next = await loadSite(siteId);
-    this.diorama.setContent(next.group, this.site?.group);
+    this.env.setSite(next.group, this.site?.group);
     next.group.add(this.orbs.group, this.outline.mesh, this.beam.group);
     this.orbs.clear();
     this.agents.close();
@@ -227,7 +423,7 @@ export class NexusApp {
     this.descriptors.clear();
     this.closeEvidence();
     for (const f of next.features) this.paintRing(f.id);
-    if (this.screen !== "pair" && this.screen !== "welcome") this.go("idle");
+    if (this.screen !== "pair" && this.screen !== "welcome" && this.env.mode === "region") this.go("idle");
     this.sendContext();
     this.renderWrist();
     this.changed();
@@ -237,9 +433,11 @@ export class NexusApp {
   frame(now: number): void {
     const dt = this.lastFrame ? Math.min(100, now - this.lastFrame) : 16;
     this.lastFrame = now;
+    this.placement.update(now);
+    if (this.placing && !this.guidePlaced && this.placement.viewerReady) this.placeGuide();
     this.input.update();
     this.placeWristMenu();
-    for (const p of [this.main, this.captions, this.wrist, this.evidence, this.agents]) p.update(now);
+    for (const p of [this.main, this.captions, this.wrist, this.evidence, this.agents, this.guide]) p.update(now);
     this.orbs.update(now);
     if (this.ptt && now - this.ptt.lastSample >= POINTER_INTERVAL_MS) {
       this.ptt.lastSample = now;
@@ -248,7 +446,10 @@ export class NexusApp {
     if (now - this.hoverCheckedAt >= 100) {
       this.hoverCheckedAt = now;
       this.hoverFeature = this.featureUnderRay();
+      this.hoverMarker = this.markerUnderRay();
     }
+    this.env.update(now, this.hoverMarker);
+    if (this.env.mode === "globe" || this.placing) return;
     const site = this.site;
     if (!site) return;
     const cam = this.world.renderer.xr.isPresenting ? this.world.renderer.xr.getCamera() : this.world.camera;
@@ -290,7 +491,7 @@ export class NexusApp {
           this.speaker.phrase("welcome");
           this.speaker.phrase("onboardingHint");
         }
-        return this.go("idle");
+        return this.go(this.env.mode === "globe" ? "globe" : "idle");
       case "sel":
         if (arg === "investigate") return void this.investigate();
         this.selected = undefined;
@@ -303,7 +504,14 @@ export class NexusApp {
       case "clarify":
         return this.onClarify(arg);
       case "site":
-        return void this.loadSite(arg);
+        // From the globe, a site button opens its region; in region mode it swaps the terrain in place.
+        return void this.openRegion(arg);
+      case "env":
+        if (arg === "globe") this.showGlobe();
+        return;
+      case "ar":
+        if (arg === "reposition") this.startPlacing();
+        return;
       case "wrist":
         if (arg === "logbook") return void this.showLogbook();
         if (arg === "stop") return this.speaker.stop();
@@ -321,7 +529,7 @@ export class NexusApp {
       case "evwin":
         return this.closeEvidence();
       case "back":
-        return this.go(this.selected && this.findings.has(this.selected) ? "finding" : "idle");
+        return this.go(this.selected && this.findings.has(this.selected) ? "finding" : this.env.mode === "globe" ? "globe" : "idle");
     }
   }
 
@@ -399,7 +607,14 @@ export class NexusApp {
   private hoverFeature?: string;
   private hoverCheckedAt = 0;
 
+  private markerUnderRay(): boolean {
+    const point = this.env.mode === "globe" ? this.input.rayHit("right").point : undefined;
+    const mark = this.env.regionMark;
+    return point !== undefined && mark !== undefined && angularDistanceDeg(modelToLatLon(this.env.globeLatLon(point)), mark) <= GLOBE_PICK_DEG;
+  }
+
   private featureUnderRay(): string | undefined {
+    if (this.env.mode !== "region") return undefined;
     const site = this.site;
     const point = this.input.rayHit("right").point;
     if (!site || !point || this.screen === "pair" || this.screen === "welcome") return undefined;
@@ -747,6 +962,12 @@ export class NexusApp {
         lines.push({ text: "Point at a glowing ring on the terrain and pinch to select a feature. Poke buttons with your fingertip.", tone: "muted" });
         rows.push([{ id: "onboard:skip", label: "Skip" }, { id: "onboard:start", label: "Start", style: "primary" }]);
         break;
+      case "globe":
+        lines.push({ text: "The Moon", tone: "title" });
+        lines.push({ text: "Point at the marked region and pinch to open its terrain, or choose a site.", tone: "body" });
+        lines.push({ text: MOON_CREDIT, tone: "muted" });
+        rows.push(SITES.map((s) => ({ id: `site:${s.siteId}`, label: s.short, style: "chip" as const })));
+        break;
       case "idle": {
         const site = SITES.find((s) => s.siteId === this.site?.siteId);
         lines.push({ text: site?.name ?? "Loading terrain…", tone: "title" });
@@ -828,9 +1049,9 @@ export class NexusApp {
 
   private renderWrist(): void {
     const talking = this.ptt !== undefined;
-    const site = SITES.find((s) => s.siteId === this.site?.siteId);
+    const site = this.env.mode === "region" ? SITES.find((s) => s.siteId === this.site?.siteId) : undefined;
     this.wrist.set({
-      lines: [{ text: site ? `NEXUS · ${site.name}` : "NEXUS", tone: "muted" }],
+      lines: [{ text: site ? `NEXUS · ${site.name}` : "NEXUS · The Moon", tone: "muted" }],
       rows: [
         [
           { id: "wrist:logbook", label: "Logbook" },
@@ -845,12 +1066,17 @@ export class NexusApp {
           { id: "view:rotate_left", label: "↺ Turn" },
           { id: "view:rotate_right", label: "Turn ↻" },
         ],
-        SITES.map((s) => ({ id: `site:${s.siteId}`, label: s.short, style: s.siteId === site?.siteId ? ("chip" as const) : ("secondary" as const) })),
+        SITES.map((s) => ({ id: `site:${s.siteId}`, label: s.short, style: s.siteId === site?.siteId && this.env.mode === "region" ? ("chip" as const) : ("secondary" as const) })),
+        [
+          { id: "env:globe", label: "Moon", style: this.env.mode === "globe" ? ("chip" as const) : ("secondary" as const) },
+          // Reposition needs a surface to search; the 3D viewer has no room to put it in.
+          ...(this.experience === "ar" ? [{ id: "ar:reposition", label: "Move" }] : []),
+        ],
         [{ id: "wrist:ptt", label: talking ? "Listening… release to send" : "Hold to talk", style: talking ? "active" : "primary" }],
       ],
     });
-    // Before pairing there is nothing the menu could do.
-    if (!this.api.session) this.wrist.setOpen(false);
+    // Before pairing, and while placing, there is nothing the menu could do.
+    if (!this.api.session || this.placing) this.wrist.setOpen(false);
   }
 
   private renderCaptions(): void {
@@ -871,13 +1097,13 @@ export class NexusApp {
   /** Palm toward the face or up shows the wrist menu; without a tracked left hand it stays at the left front. */
   private placeWristMenu(): void {
     const mesh = this.wrist.mesh;
-    if (!this.api.session) {
+    if (!this.api.session || this.placing) {
       if (mesh.visible) this.wrist.setOpen(false);
       return;
     }
     const cam = this.world.renderer.xr.isPresenting ? this.world.renderer.xr.getCamera() : this.world.camera;
     cam.getWorldPosition(this.head);
-    if (!this.opts.desktop && this.input.leftWrist(this.wristPose)) {
+    if (!this.desktop && this.input.leftWrist(this.wristPose)) {
       const toHead = this.head.clone().sub(this.wristPose.position).normalize();
       const facing = Math.max(this.wristPose.palmNormal.dot(toHead), this.wristPose.palmNormal.y);
       const wasVisible = this.wrist.isOpen;
@@ -900,7 +1126,8 @@ export class NexusApp {
     } else {
       // Controllers and desktop mode: park the menu to the far left, clear of the evidence window.
       this.wrist.open();
-      mesh.position.set(-0.42, 0.76, -0.22);
+      const dock = viewToWorld(this.stage, LAYOUT.wristDock);
+      mesh.position.set(dock.x, dock.y, dock.z);
       mesh.lookAt(this.head);
     }
   }
@@ -1030,6 +1257,10 @@ function splitId(id: string): [string, string?] {
 function citedIds(f: ScientificFinding): string[] {
   const ids = f.claims.flatMap((c) => [...(c.measurementIds ?? []), ...c.evidenceIds]);
   return [...new Set(ids)];
+}
+
+function v(p: Vec3): Vector3 {
+  return new Vector3(p.x, p.y, p.z);
 }
 
 function vec(v: Vector3): { x: number; y: number; z: number } {

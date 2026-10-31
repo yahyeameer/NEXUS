@@ -1,78 +1,121 @@
-# apps/xr: NEXUS headset client
+# apps/xr: NEXUS AR client
 
-Three.js WebXR client for Meta Quest Browser. With no headset, it runs in **IWER** (Meta's Immersive Web Emulation
-Runtime), which emulates a Quest 3 with tracked hands in a desktop browser.
+Three.js WebXR client. NEXUS is an **AR application**: on Meta Quest (Quest Browser) or an ARCore Android phone
+(Chrome) it opens an `immersive-ar` session, finds a real table or floor with WebXR hit-test, and the scientist taps
+or pinches to place NASA's Moon there. There is no virtual room or sky: the camera passthrough is the background.
+Browsers without immersive AR get the **3D viewer** instead, said plainly on the launch screen; NEXUS never swaps in a
+VR session. The 3D viewer and the tests run on **IWER** (Meta's Immersive Web Emulation Runtime), which emulates a
+Quest 3 with tracked hands.
 
-## Run it without a Quest
+## The flow
+
+1. **Launch screen**: "Enter AR Exploration" (enabled only when `immersive-ar` is supported, with the reason when it is
+   not) and "Explore in 3D". The browser asks for camera access when AR starts; nothing is recorded.
+2. **Find a surface**: a small guide panel says what to do; a cyan ring with the model's footprint lies on the surface
+   found by hit-test (right hand's ray on Quest, screen centre on a phone). Walls are ignored.
+3. **Place**: pinch, trigger or tap. The pose is held by a WebXR anchor where the device grants `anchors`, otherwise
+   fixed in the session's reference space. Devices with AR but no hit-test place it ahead of you, and say so.
+4. **The Moon**: NASA's LRO colour globe (SVS 14959) with the surveyed region marked. Its position comes from the
+   sites' own evidence (the LROC DTM item's lon/lat bbox), never typed in.
+5. **The region**: pinch the marker (or a site button) to open that site's LROC terrain as a tabletop model on the same
+   anchor; **Moon** goes back. Panels dock in front of you, turned toward the model, wherever it was placed.
+6. **Move it**: pinch-drag turns, two-hand pinch zooms; on a phone, drag turns, pinch scales and twist turns. Reset and
+   Move (search and place again) are on the wrist menu, and on the phone's on-screen toolbar.
+
+## Run it without a headset
 
 ```bash
 pnpm install
 pnpm dev:xr        # API (in memory) + orchestrator (precomputed) + voice gateway (simulated speech) + this client
 ```
 
-Open https://localhost:5173 and accept the self-signed certificate. It enters the emulator by itself and the **mouse is
-your right hand**: no gestures needed. Pair with code `1234` (type it on the keyboard), or set `NEXUS_PAIRING_CODE`.
+Open https://localhost:5173, accept the self-signed certificate and choose **Explore in 3D**. The **mouse is your
+right hand**: no gestures needed. Pair with code `1234` (type it on the keyboard), or set `NEXUS_PAIRING_CODE`.
 
 | Mouse and keyboard | Does |
 | --- | --- |
-| Move the mouse | Aims the right hand's ray. Buttons and glowing rings light up under it |
-| Click | A pinch: press a button, pick a feature |
-| Drag on the terrain | Turns it |
+| Move the mouse | Aims the right hand's ray. Buttons, rings and the globe's marker light up under it |
+| Click | A pinch: press a button, pick a feature, open the region on the globe |
+| Drag on the model | Turns it |
 | Wheel | Zooms |
 | `0`–`9`, `Backspace`, `Enter` | Pairing code; Enter also means Start and Investigate |
 | Hold `Space` | Hold to talk (type your words in the Simulated speech box first) |
 | `Q` / `E`, `+` / `-`, `R` | Turn, zoom, reset |
 | `Esc` | Close the evidence window |
 
-These keys press the same buttons a hand would, so nothing is desktop-only. Add `?devui=1` to get IWER's own panel
-for moving the head and both hands directly (the fingertip-poke and palm-up paths), or `?devui=0` for the test setup.
+These keys press the same buttons a hand would, so nothing is desktop-only. The **Controls** card (top right) folds
+this table away. Add `?devui=1` to get IWER's own panel for moving the head and both hands directly (the
+fingertip-poke and palm-up paths), or `?devui=0` for the test setup.
 
-| Do this | Emulator |
+| Do this | Hands |
 | --- | --- |
+| Place the model | Point the right hand's ray at a table or the floor until the ring appears, then pinch |
+| Open the region | Point at the marker on the Moon and pinch, or poke a site button on the card |
 | Select a feature | Point the right hand's ray at a glowing ring and pinch |
 | Press a button | Poke it with the right index fingertip, or ray + pinch |
 | Open the wrist menu | Turn the left palm up or toward your face |
-| Turn or zoom the terrain | Pinch on the terrain and drag sideways to turn it. Pinch with both hands and spread or squeeze to zoom. The wrist menu also has Turn, Zoom and Reset buttons |
+| Turn or zoom | Pinch on the model and drag sideways to turn it. Pinch with both hands and spread or squeeze to zoom. The wrist menu also has Turn, Zoom and Reset |
+| Back to the Moon, or move it | Wrist menu: **Moon**, **Move** |
 | Open evidence | On a finding card poke **Evidence**, then a chip. The source opens beside the card with its credit, licence and image crop |
 | Describe what you see | After selecting, poke descriptor chips. They are saved with the observation as your words |
 | Talk (optional) | Hold **Hold to talk** on the wrist menu. Your desktop mic streams while held. Type your words in the **Simulated speech** box before you release, since no STT provider is chosen yet |
 
-Query options:
+Query options (development and tests):
 
-- `?site=ELBOW_CRATER` picks the starting site.
-- `?devui=0` is what the hands-only tests use: no mouse hand, no IWER panel.
-- `?emulator` forces the emulator even when the browser has a WebXR device.
+- `?site=ELBOW_CRATER` opens that site's terrain directly instead of starting on the Moon.
+- `?devui=0` is what the hands-only tests use: an emulated Quest 3 from the start, no mouse hand, no IWER panel.
+  `?devui=1` adds IWER's panel. `?emulator` forces the emulator even when the browser has a WebXR device.
+- `?surface=emulated` (emulator only) stands a flat test plane in for hit-test, so the placement flow can be tried and
+  tested. IWER cannot hit-test without its 10 MB synthetic-environment module, which this client does not load.
+- `?debug=1` shows the status line and the capability dump. Users never see debug text otherwise.
 
 `pnpm dev:xr:client` runs only this client. It needs the services running elsewhere: set `API_URL` and
 `VOICE_GATEWAY_URL` for the Vite proxy.
 
-## On a Quest
+## On a device
 
-Run `pnpm dev` and open `https://<your-machine>:5173` in Quest Browser on the same network. The client asks for a
-passthrough (`immersive-ar`) session when the headset supports it, so the diorama sits on your real desk.
+Run `pnpm dev` and open `https://<your-machine>:5173` on the same network: Quest Browser on a Quest 3/3S/Pro, or
+Chrome on an ARCore Android phone. Choose **Enter AR Exploration**. The session requires `hit-test` and asks for
+`anchors`, `dom-overlay` (phone toolbar), `hand-tracking`, `local-floor` and `plane-detection`; it reads back what was
+granted (`?debug=1` shows it) and works with whatever subset the device gives.
+
+## NASA assets
+
+`data/planets/moon/globe/` holds the Moon globe and its `provenance.json` (source URL, SHA-256 of the NASA file, credit,
+what was changed and why, what the source does not state). `scripts/data/build_moon_globe.py` rebuilds it from NASA's
+`moon_small.glb`. The globe is a display only: its units and CRS are not published, so nothing is measured on it.
+Measurements come from the LROC terrain (`data/terrain/README.md`).
 
 ## Tests
 
-- `pnpm test` runs the pure logic: tile↔scene mapping, feature picking, the poke state machine, terrain gestures, PCM encoding and finding cards.
+- `pnpm test` runs the pure logic: placement stage maths, capability and feature reading, touch gestures, the globe's
+  lat/lon frame, site locations from evidence, tile↔scene mapping, feature picking, the poke state machine, terrain
+  gestures, PCM encoding and finding cards.
 - `pnpm test:e2e` runs Playwright against the full emulator stack. The tests move IWER's emulated hands through its
-  remote-control API: fingertip presses on panel buttons, ray + pinch on terrain features, and palm-up for the wrist
-  menu. They never call app handlers, so a passing run means the flow works with hands only. Stop `pnpm dev:xr` first,
-  because the tests start their own clean stack. In environments with a preinstalled Chromium, set
-  `PLAYWRIGHT_CHROMIUM_PATH`.
+  remote-control API: aiming at a surface and pinching to place, fingertip presses on panel buttons, ray + pinch on
+  the globe's marker and terrain features, and palm-up for the wrist menu. They never call app handlers, so a passing
+  run means the flow works with hands only. Stop `pnpm dev:xr` first, because the tests start their own clean stack.
+  In environments with a preinstalled Chromium, set `PLAYWRIGHT_CHROMIUM_PATH`.
 
 ## Layout
 
 ```
-src/main.ts           boot: native WebXR or the emulator
+src/main.ts           boot: capabilities → launch screen → AR session or 3D viewer
+src/ar/               capability detection, session manager, surface detection (hit-test), placement reticle,
+                      planetary anchor, placement flow, stage (layout ↔ placed pose), phone touch gestures
+src/planet/           NASA Moon globe, site locations from evidence, the globe/region environment
 src/emulator.ts       IWER device, dev UI, test target resolver
 src/app.ts            screens, selection → research → finding → review, wrist menu, voice wiring
-src/scene/            world, terrain diorama (packages/terrain buildMesh), feature picking, tile↔scene mapping
-src/input/            fingertip poke + ray/pinch for hands and controllers; mouse-as-hand for the desktop emulator
+src/scene/            renderer and lights, terrain model (packages/terrain buildMesh), feature picking, tile↔scene mapping
+src/input/            fingertip poke + ray/pinch for hands and controllers; mouse-as-hand for the 3D viewer
 src/ui/               the finding-card model and text layout
 src/ui/spatial/       NEXUS Spatial UI design system (below)
-src/web/              desktop-only HTML: simulated-speech box, controls card, page styles
+src/web/              plain web UI: launch screen, toolbar and session status, debug panel, controls card, simulated speech
 src/net/, src/audio/  API + event stream, voice gateway socket, push-to-talk mic, captioned speech
 ```
+
+Panels draw over the model, and rays and pokes prefer the panel they visibly cross. HTML in `src/web` never imports
+from `src/ui/spatial`, and nothing in `src/ui/spatial` touches the DOM outside its own canvases.
 
 ## NEXUS Spatial UI design system
 
@@ -97,6 +140,7 @@ from `src/ui/spatial`, and nothing in `src/ui/spatial` touches the DOM outside i
 
 ## Not yet in this client
 
-Grab-and-move of the terrain; the immersive mode; the video panel; debate; whisper mode; suggested-question chips;
+Grab-and-move of the model by hand (Move re-places it instead); Mars; streamed terrain tiles with level of detail;
+the immersive mode; the video panel; debate; whisper mode; suggested-question chips;
 spatial (HRTF) voices; audio cues for ring states; the offline precomputed bundle inside the client.
 These follow the later milestones in `docs/TASKS.md`.

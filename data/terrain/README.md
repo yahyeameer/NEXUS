@@ -39,3 +39,9 @@ which reads wider than the channel-floor widths often quoted in the literature.
 `scripts/data/build_data.py` regenerates the tiles, textures, evidence packs and media crops. Download the
 two `.IMG` products above into `dem/A15.IMG` and `dem/ORTHO.IMG` under a scratch directory, then from that
 directory run `python3 <repo>/scripts/data/build_data.py <repo>/data` (needs numpy and Pillow).
+
+## Planet models
+
+`data/planets/<body>/` holds whole-body models for the AR globe view, each with a `provenance.json`. The Moon globe
+(`data/planets/moon/globe/`) is derived from NASA SVS 14959 by `scripts/data/build_moon_globe.py`; see its provenance
+file for the source, checksum, credit and what the source does not state.
