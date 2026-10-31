@@ -20,6 +20,7 @@ export function launchScreen(root: HTMLElement): LaunchScreen {
   el.setAttribute("aria-labelledby", "launch-title");
   el.innerHTML = `
     <div class="launch-inner">
+      <div class="launch-orbit" aria-hidden="true"><i></i><i></i><i></i><b></b></div>
       <h1 id="launch-title">NEXUS</h1>
       <p class="launch-sub">Spatial intelligence for scientific discovery</p>
       <div class="launch-actions">

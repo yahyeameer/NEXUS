@@ -35,6 +35,11 @@ export class Speaker {
     return this.current !== undefined;
   }
 
+  /** Who is speaking now, for the voice window. */
+  get currentSpeaker(): string | undefined {
+    return this.current?.u.speaker;
+  }
+
   fromGateway(m: Speak): void {
     this.enqueue({
       scriptId: m.sieDecisionId ? m.scriptId : undefined,
