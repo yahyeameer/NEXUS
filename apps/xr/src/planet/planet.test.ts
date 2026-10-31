@@ -47,3 +47,22 @@ describe("terrain level of detail", () => {
     expect(tiles.refining).toBe(false);
   });
 });
+
+describe("scientific tools", () => {
+  it("writes a measurement as plain lines with signs and units, from the record only", async () => {
+    const { measurementLines } = await import("../interaction/measurementTool.js");
+    const lines = measurementLines({ horizontalM: 1234.4, elevationAM: -1800, elevationBM: -1856.2, heightDifferenceM: -56.2, gradientDeg: -2.6, minElevationM: -1870.1, maxElevationM: -1799.9, method: "m", sourceEvidenceId: "EV-X-001" });
+    expect(lines[0]).toBe("Distance: 1,234 m (horizontal)");
+    expect(lines[1]).toBe("Height difference: -56.2 m (second point lower)");
+    expect(lines[2]).toBe("Mean gradient: -2.6°");
+    expect(lines.join(" ")).not.toMatch(/confirmed|discovered|proven/i);
+  });
+
+  it("eases focus moves to a stop", async () => {
+    const { easeOut } = await import("../interaction/spatialFocus.js");
+    expect(easeOut(0)).toBe(0);
+    expect(easeOut(1)).toBe(1);
+    expect(easeOut(2)).toBe(1);
+    expect(easeOut(0.5)).toBeGreaterThan(0.5);
+  });
+});

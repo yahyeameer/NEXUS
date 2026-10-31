@@ -7,6 +7,7 @@ import {
   tileRanges,
   tileVertexCount,
   craterMetrics,
+  lineMeasurement,
   crossSectionMetrics,
   measureFeature,
   parseDem,
@@ -214,5 +215,26 @@ describe("tiled terrain", () => {
     if (!t) throw new Error("tile");
     expect(tileVertexCount(t, 9)).toBe(81);
     expect(tileVertexCount(t, 129)).toBe(26 * 26);
+  });
+});
+
+describe("lineMeasurement", () => {
+  it("measures distance, height difference and gradient on a tilted plane", () => {
+    // Rises 1 m per 10 m eastward: a 5.71° slope.
+    const g = syntheticGrid(51, 51, 2, (x) => x * 0.1);
+    const m = lineMeasurement(g, { x: 10, z: 20 }, { x: 90, z: 20 });
+    expect(m.ok).toBe(true);
+    if (!m.ok) return;
+    expect(m.value.horizontalM).toBeCloseTo(80);
+    expect(m.value.heightDifferenceM).toBeCloseTo(8);
+    expect(m.value.gradientDeg).toBeCloseTo(5.7, 1);
+    expect([m.value.minElevationM, m.value.maxElevationM]).toEqual([1, 9]);
+    expect(m.value.sourceEvidenceId).toBe(g.header.sourceEvidenceId);
+  });
+
+  it("refuses points closer than a cell or outside the tile instead of guessing", () => {
+    const g = syntheticGrid(11, 11, 10, () => 0);
+    expect(lineMeasurement(g, { x: 10, z: 10 }, { x: 12, z: 10 }).ok).toBe(false);
+    expect(lineMeasurement(g, { x: 10, z: 10 }, { x: 500, z: 10 }).ok).toBe(false);
   });
 });

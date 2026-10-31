@@ -19,6 +19,7 @@ export interface XrState {
   descriptors: string[];
   evidenceOpen?: string;
   orbs: number;
+  tools: { measure: string; measurement?: { horizontalM: number; heightDifferenceM: number; gradientDeg: number }; markPending: boolean; savedObservations: string[]; focus?: string };
   ar: { mode: string; phase: string; surface: string; surfaceFound: boolean; anchor: string; tracking: boolean; environment: string; regionMarked: boolean };
 }
 

@@ -230,3 +230,56 @@ function round(v: number, digits: number): number {
   const f = 10 ** digits;
   return Math.round(v * f) / f;
 }
+
+/** The scientist's ruler between two terrain points (MeasurementTool in the AR client). */
+export interface LineMeasurement {
+  /** Planimetric distance, metres. */
+  horizontalM: number;
+  /** Elevation at each end, metres, from the DEM. */
+  elevationAM: number;
+  elevationBM: number;
+  /** End B minus end A, metres. */
+  heightDifferenceM: number;
+  /** Mean gradient from A to B in degrees (positive uphill toward B). */
+  gradientDeg: number;
+  /** Lowest and highest points on the profile between the ends. */
+  minElevationM: number;
+  maxElevationM: number;
+  method: string;
+  sourceEvidenceId: string;
+}
+
+/**
+ * Distance, height difference and mean gradient between two tile points, read from the full-resolution DEM.
+ * Fails (never guesses) if either end or the line between them crosses no-data or leaves the tile.
+ */
+export function lineMeasurement(grid: DemGrid, a: TilePoint, b: TilePoint): Result<LineMeasurement> {
+  const prof = profile(grid, a, b);
+  if (!prof.ok) return prof;
+  const first = prof.value[0];
+  const last = prof.value[prof.value.length - 1];
+  if (!first || !last) return { ok: false, error: "empty profile" };
+  const horizontalM = planarDistance(a, b);
+  if (horizontalM < grid.header.cellSizeM) return { ok: false, error: `points are closer than one DEM cell (${grid.header.cellSizeM} m)` };
+  let min = Infinity;
+  let max = -Infinity;
+  for (const s of prof.value) {
+    min = Math.min(min, s.elevationM);
+    max = Math.max(max, s.elevationM);
+  }
+  const dh = last.elevationM - first.elevationM;
+  return {
+    ok: true,
+    value: {
+      horizontalM: round(horizontalM, 1),
+      elevationAM: round(first.elevationM, 1),
+      elevationBM: round(last.elevationM, 1),
+      heightDifferenceM: round(dh, 1),
+      gradientDeg: round((Math.atan2(dh, horizontalM) * 180) / Math.PI, 1),
+      minElevationM: round(min, 1),
+      maxElevationM: round(max, 1),
+      method: `straight line on the DEM, bilinear elevations every ${grid.header.cellSizeM / 2} m; gradient = atan(height difference / horizontal distance)`,
+      sourceEvidenceId: grid.header.sourceEvidenceId,
+    },
+  };
+}

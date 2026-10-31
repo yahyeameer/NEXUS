@@ -17,6 +17,9 @@ export class Diorama {
   /** Yaw that faces the placed model toward the viewer; the scientist's turns are added on top. */
   private baseYaw = 0;
   private userYaw = 0;
+  /** Layout offset (x, z) from the table centre that sits on the pivot: SpatialFocus moves a feature here. */
+  private focusX = 0;
+  private focusZ = 0;
 
   constructor() {
     this.pivot.name = "diorama";
@@ -51,6 +54,17 @@ export class Diorama {
     if (obj) this.inner.add(obj);
   }
 
+  get focus(): { x: number; z: number } {
+    return { x: this.focusX, z: this.focusZ };
+  }
+
+  /** Slide the content so the layout point `dx, dz` from the table centre rests on the pivot. */
+  setFocus(dx: number, dz: number): void {
+    this.focusX = dx;
+    this.focusZ = dz;
+    this.inner.position.set(-this.center.x - dx, -this.center.y, -this.center.z - dz);
+  }
+
   rotateBy(rad: number): void {
     this.userYaw += rad;
     this.pivot.rotation.y = this.baseYaw + this.userYaw;
@@ -68,6 +82,7 @@ export class Diorama {
   }
 
   reset(): void {
+    this.setFocus(0, 0);
     this.userYaw = 0;
     this.pivot.rotation.set(0, this.baseYaw, 0);
     this.pivot.scale.setScalar(1);

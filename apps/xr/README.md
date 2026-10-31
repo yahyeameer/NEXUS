@@ -56,6 +56,9 @@ fingertip-poke and palm-up paths), or `?devui=0` for the test setup.
 | Open the wrist menu | Turn the left palm up or toward your face |
 | Turn or zoom | Pinch on the model and drag sideways to turn it. Pinch with both hands and spread or squeeze to zoom. The wrist menu also has Turn, Zoom and Reset |
 | Back to the Moon, or move it | Wrist menu: **Moon**, **Move** |
+| Measure | On the site card poke **Measure**, then pinch two points. Distance, height difference, mean gradient and the elevation range come from the full DEM by `packages/terrain` `lineMeasurement`, shown with method and source. A measurement, not a finding |
+| Mark a spot | Poke **Mark a spot**, pinch anywhere, poke what you see, **Save**. It is stored as your observation (`OBS-…`) in your words and does not start research |
+| Focus | Select a feature, then **Focus** (card or wrist menu): it glides to the middle and is magnified. **Reset** returns to the whole site |
 | Open evidence | On a finding card poke **Evidence**, then a chip. The source opens beside the card with its credit, licence and image crop |
 | Describe what you see | After selecting, poke descriptor chips. They are saved with the observation as your words |
 | Talk (optional) | Hold **Hold to talk** on the wrist menu. Your desktop mic streams while held. Type your words in the **Simulated speech** box before you release, since no STT provider is chosen yet |
@@ -114,6 +117,7 @@ src/ar/               capability detection, session manager, surface detection (
                       planetary anchor, placement flow, stage (layout ↔ placed pose), phone touch gestures
 src/planet/           NASA Moon globe, site locations from evidence, the globe/region environment, terrain tiles with LOD
 src/emulator.ts       IWER device, dev UI, test target resolver
+src/interaction/      measurement tool, spot observation capture, spatial focus
 src/app.ts            screens, selection → research → finding → review, wrist menu, voice wiring
 src/scene/            renderer and lights, terrain model (packages/terrain buildMesh), feature picking, tile↔scene mapping
 src/input/            fingertip poke + ray/pinch for hands and controllers; mouse-as-hand for the 3D viewer

@@ -28,7 +28,7 @@ export class ApiClient {
     return r.ok ? { ok: true, value: { ...r.value, userId } } : r;
   }
 
-  createObservation(siteId: string, featureId: string, spatialAnchor: SpatialAnchor, description?: string): Promise<Result<Observation>> {
+  createObservation(siteId: string, featureId: string | undefined, spatialAnchor: SpatialAnchor, description?: string): Promise<Result<Observation>> {
     return this.call("POST", "/observations", { siteId, source: "hand_select", featureId, spatialAnchor, description }, observation);
   }
 

@@ -13,6 +13,10 @@ import type { StagePose } from "./ar/stage.js";
 import type { Vec3 } from "./scene/tabletop.js";
 import { MOON_CREDIT, angularDistanceDeg, modelToLatLon } from "./planet/moonModel.js";
 import { PlanetaryEnvironment } from "./planet/planetaryEnvironment.js";
+import { MeasurementTool, measurementLines } from "./interaction/measurementTool.js";
+import { ObservationCapture } from "./interaction/observationCapture.js";
+import { SpatialFocus } from "./interaction/spatialFocus.js";
+import { sampleElevation } from "@nexus/terrain";
 import type { EnvironmentMode } from "./planet/planetaryEnvironment.js";
 import { PushToTalkMic } from "./audio/mic.js";
 import { Speaker } from "./audio/speaker.js";
@@ -25,7 +29,7 @@ import { VoiceClient } from "./net/voice.js";
 import { zoomedScale } from "./input/manipulate.js";
 import { pickFeature } from "./scene/featurePick.js";
 import { AgentOrbs } from "./scene/orbs.js";
-import { sceneToTile } from "./scene/tabletop.js";
+import { sceneToTile, tileToScene } from "./scene/tabletop.js";
 import { loadSite } from "./scene/terrain.js";
 import type { LoadedSite } from "./scene/terrain.js";
 import type { World } from "./scene/world.js";
@@ -43,7 +47,7 @@ import {
 } from "./ui/spatial/index.js";
 import type { ButtonSpec, MarkerState, PanelContent, PanelLine } from "./ui/spatial/index.js";
 
-type Screen = "pair" | "welcome" | "globe" | "idle" | "selected" | "researching" | "finding" | "reason" | "sources" | "evidence" | "logbook" | "clarify";
+type Screen = "pair" | "welcome" | "globe" | "idle" | "measure" | "mark" | "selected" | "researching" | "finding" | "reason" | "sources" | "evidence" | "logbook" | "clarify";
 
 export interface AppOptions {
   emulated: boolean;
@@ -73,6 +77,8 @@ export interface AppState {
   evidenceOpen?: string;
   orbs: number;
   ar: PlacementStatus & { mode: ExperienceMode; environment: EnvironmentMode; regionMarked: boolean };
+  /** Scientific tools: ruler step and result, saved spot observations, the feature in focus. */
+  tools: { measure: string; measurement?: { horizontalM: number; heightDifferenceM: number; gradientDeg: number }; markPending: boolean; savedObservations: string[]; focus?: string };
   /** Terrain drawing: surface vertices in use (budget 256²) and whether tiles are still refining. */
   terrain?: { vertices: number; refining: boolean; lodSides: number[] };
 }
@@ -123,6 +129,9 @@ export class NexusApp {
   readonly env = new PlanetaryEnvironment();
   readonly diorama = this.env.diorama;
   readonly placement: PlacementController;
+  private readonly measure = new MeasurementTool();
+  private readonly capture = new ObservationCapture();
+  private readonly spatialFocus = new SpatialFocus(this.diorama);
   private experience: ExperienceMode = "viewer";
   private stage: StagePose = DEFAULT_STAGE;
   private hoverMarker = false;
@@ -264,6 +273,13 @@ export class NexusApp {
       evidenceOpen: this.evidenceOpen,
       orbs: this.orbs.count,
       ar: { ...this.placement.status(), mode: this.experience, environment: this.env.mode, regionMarked: this.env.regionMark !== undefined },
+      tools: {
+        measure: this.measure.state.step,
+        measurement: this.measure.state.step === "done" ? { horizontalM: this.measure.state.result.horizontalM, heightDifferenceM: this.measure.state.result.heightDifferenceM, gradientDeg: this.measure.state.result.gradientDeg } : undefined,
+        markPending: this.capture.pendingMark !== undefined,
+        savedObservations: this.capture.savedIds,
+        focus: this.spatialFocus.target,
+      },
       terrain: this.site ? { vertices: this.site.tiles.vertexCount, refining: this.site.tiles.refining, lodSides: this.site.tiles.lodSides() } : undefined,
     };
   }
@@ -411,6 +427,18 @@ export class NexusApp {
       return out;
     }
     for (const [id, a] of this.site?.anchors ?? []) out.push({ name: `feature/${id}`, position: this.diorama.toWorld(a), normal: new Vector3(0, 1, 0), size: new Vector3(0.05, 0.01, 0.05) });
+    // Measure and mark take any terrain point; four named spots let hand-driven tests aim at open ground.
+    if ((this.screen === "measure" || this.screen === "mark") && this.site) {
+      const site = this.site;
+      const quarter: [string, number, number][] = [["nw", 0.3, 0.3], ["ne", 0.7, 0.3], ["sw", 0.3, 0.7], ["se", 0.7, 0.7]];
+      for (const [name, fx, fz] of quarter) {
+        const t = { x: site.frame.widthM * fx, z: site.frame.depthM * fz };
+        const e = sampleElevation(site.grid, t);
+        if (e === undefined) continue;
+        const layout = tileToScene(site.frame, { x: t.x, y: e, z: t.z });
+        out.push({ name: `terrain/${name}`, position: this.diorama.toWorld(layout), normal: new Vector3(0, 1, 0), size: new Vector3(0.03, 0.01, 0.03) });
+      }
+    }
     return out;
   }
 
@@ -418,7 +446,11 @@ export class NexusApp {
     const next = await loadSite(siteId);
     this.env.setSite(next.group, this.site?.group);
     this.site?.tiles.dispose();
-    next.group.add(this.orbs.group, this.outline.mesh, this.beam.group);
+    next.group.add(this.orbs.group, this.outline.mesh, this.beam.group, this.measure.group, this.capture.group);
+    this.measure.reset();
+    this.capture.clear();
+    this.spatialFocus.clear();
+    this.diorama.setFocus(0, 0);
     this.orbs.clear();
     this.agents.close();
     this.beam.stop();
@@ -439,6 +471,7 @@ export class NexusApp {
     const dt = this.lastFrame ? Math.min(100, now - this.lastFrame) : 16;
     this.lastFrame = now;
     this.placement.update(now);
+    this.spatialFocus.update(now);
     if (this.placing && !this.guidePlaced && this.placement.viewerReady) this.placeGuide();
     this.input.update();
     this.placeWristMenu();
@@ -500,6 +533,7 @@ export class NexusApp {
         return this.go(this.env.mode === "globe" ? "globe" : "idle");
       case "sel":
         if (arg === "investigate") return void this.investigate();
+        if (arg === "focus") return this.focusSelected();
         this.selected = undefined;
         this.repaintRings();
         return this.go("idle");
@@ -512,6 +546,30 @@ export class NexusApp {
       case "site":
         // From the globe, a site button opens its region; in region mode it swaps the terrain in place.
         return void this.openRegion(arg);
+      case "tool":
+        if (arg === "measure") {
+          this.measure.reset();
+          this.notice = undefined;
+          return this.go("measure");
+        }
+        if (arg === "mark") {
+          this.capture.cancel();
+          this.descriptors.clear();
+          this.notice = undefined;
+          return this.go("mark");
+        }
+        if (arg === "measure_again") {
+          this.measure.reset();
+          return this.render();
+        }
+        if (arg === "save_mark") return void this.saveMark();
+        if (arg === "done") {
+          this.measure.reset();
+          this.capture.cancel();
+          this.notice = undefined;
+          return this.go("idle");
+        }
+        return;
       case "env":
         if (arg === "globe") this.showGlobe();
         return;
@@ -523,7 +581,11 @@ export class NexusApp {
         if (arg === "stop") return this.speaker.stop();
         return;
       case "view":
-        if (arg === "reset") this.diorama.reset();
+        if (arg === "focus") return this.focusSelected();
+        if (arg === "reset") {
+          this.spatialFocus.clear();
+          this.diorama.reset();
+        }
         else if (arg === "rotate_left" || arg === "rotate_right" || arg === "zoom_in" || arg === "zoom_out") this.diorama.step(arg);
         return this.changed();
       case "desc":
@@ -630,10 +692,50 @@ export class NexusApp {
   private onTerrainSelect(point: Vector3): void {
     const site = this.site;
     if (!site || this.screen === "pair" || this.screen === "welcome") return;
-    const tile = sceneToTile(site.frame, this.diorama.toLayout(point));
+    const layout = this.diorama.toLayout(point);
+    const tile = sceneToTile(site.frame, layout);
+    if (this.screen === "measure") {
+      this.measure.addPoint(site.grid, layout, { x: tile.x, z: tile.z });
+      this.render();
+      return this.changed();
+    }
+    if (this.screen === "mark") {
+      this.capture.mark({ layout, tile: { x: tile.x, y: tile.y, z: tile.z } });
+      this.render();
+      return this.changed();
+    }
     const f = pickFeature(site.features, tile, PICK_TOLERANCE_M);
     if (!f) return;
     this.selectFeature(f.id);
+  }
+
+  /** SpatialFocus on the selected feature: it glides to the middle of the model and is magnified. */
+  private focusSelected(): void {
+    const a = this.selected && this.env.mode === "region" ? this.site?.anchors.get(this.selected) : undefined;
+    if (!this.selected || !a) {
+      this.notice = "Select a feature first, then Focus brings it to the middle.";
+      return this.render();
+    }
+    this.spatialFocus.focus(this.selected, a);
+    this.changed();
+  }
+
+  /** Saves the marked spot as the scientist's observation, with their chips verbatim. Does not start research. */
+  private async saveMark(): Promise<void> {
+    const site = this.site;
+    const m = this.capture.pendingMark;
+    if (!site || !m) return;
+    const description = this.descriptors.size ? `Scientist noted: ${[...this.descriptors].join(", ")}.` : undefined;
+    const obs = await this.api.createObservation(site.siteId, undefined, { sceneLocal: { x: round(m.tile.x), y: round(m.tile.y), z: round(m.tile.z) } }, description);
+    if (!obs.ok) {
+      this.notice = "Could not save the observation. Please try again.";
+      return this.render();
+    }
+    this.capture.commit(obs.value.id);
+    this.descriptors.clear();
+    this.notice = `Saved as ${obs.value.id}, in your words. It was not sent for research.`;
+    this.render();
+    this.changed();
   }
 
   private selectFeature(featureId: string): void {
@@ -983,13 +1085,49 @@ export class NexusApp {
         lines.push({ text: "Terrain and imagery: archival LROC NAC products (NASA/GSFC/Arizona State University), not live data.", tone: "muted" });
         const h = this.site?.header;
         if (h) lines.push({ text: `Grid ${h.width} × ${h.height} posts at ${h.cellSizeM} m (${h.sourceEvidenceId}). ${h.coordinateReferenceSystem}.`, tone: "muted" });
+        rows.push([
+          { id: "tool:measure", label: "Measure" },
+          { id: "tool:mark", label: "Mark a spot" },
+        ]);
+        break;
+      }
+      case "measure": {
+        const m = this.measure.state;
+        lines.push({ text: "Measure", tone: "title" });
+        if (m.step === "first") lines.push({ text: "Point at the terrain and pinch the first point.", tone: "body" });
+        if (m.step === "second") lines.push({ text: "Now pinch the second point.", tone: "body" });
+        if (m.step === "error") lines.push({ text: `Cannot measure there: ${m.error}.`, tone: "warn" }, { text: "Pinch a new first point.", tone: "body" });
+        if (m.step === "done") {
+          for (const t of measurementLines(m.result)) lines.push({ text: t, tone: "body" });
+          // A tool reading by code, not an agent claim: labelled with its method and source (AGENTS.md rule 4).
+          lines.push({ text: `Computed by NEXUS code from ${m.result.sourceEvidenceId}: ${m.result.method}. A measurement, not a finding.`, tone: "muted" });
+        }
+        rows.push([{ id: "tool:done", label: "Done" }, { id: "tool:measure_again", label: "New measurement", style: "primary" }]);
+        break;
+      }
+      case "mark": {
+        const pending = this.capture.pendingMark;
+        lines.push({ text: "Mark a spot", tone: "title" });
+        if (!pending) lines.push({ text: "Point at the place you want to note and pinch.", tone: "body" });
+        else {
+          lines.push({ text: "Poke what you see, then Save. Your words are stored exactly as chosen.", tone: "body" });
+          const e = this.site ? sampleElevation(this.site.grid, pending.tile) : undefined;
+          if (e !== undefined) lines.push({ text: `Tile position ${Math.round(pending.tile.x)} m E, ${Math.round(pending.tile.z)} m S of the north-west corner; elevation ${e.toFixed(1)} m (DTM datum).`, tone: "muted" });
+          lines.push({ text: "Saving does not start research. To research a feature, select it and Investigate.", tone: "muted" });
+        }
+        rows.push([{ id: "tool:done", label: "Done" }, ...(pending ? [{ id: "tool:save_mark", label: "Save", style: "primary" as const }] : [])]);
+        if (pending) {
+          const chips = DESCRIPTOR_CHIPS.point;
+          rows.push(chips.slice(2).map((d) => this.chip(d)));
+          rows.push(chips.slice(0, 2).map((d) => this.chip(d)));
+        }
         break;
       }
       case "selected":
         lines.push({ text: feature?.label ?? "Feature", tone: "title" });
         lines.push({ text: `Selected ${feature?.kind ?? "feature"}. Investigate sends it to the research team; every claim is checked by the integrity engine before you see it.`, tone: "body" });
         lines.push({ text: "Optional: poke what you see. It is saved with the observation in your words.", tone: "muted" });
-        rows.push([{ id: "sel:cancel", label: "Cancel" }, { id: "sel:investigate", label: "Investigate", style: "primary" }]);
+        rows.push([{ id: "sel:cancel", label: "Cancel" }, { id: "sel:focus", label: "Focus" }, { id: "sel:investigate", label: "Investigate", style: "primary" }]);
         if (feature) {
           const chips = DESCRIPTOR_CHIPS[feature.kind];
           rows.push(chips.slice(2).map((d) => this.chip(d)));
@@ -1063,16 +1201,17 @@ export class NexusApp {
       rows: [
         [
           { id: "wrist:logbook", label: "Logbook" },
-          { id: "wrist:stop", label: "Stop speech" },
+          { id: "wrist:stop", label: "Stop" },
         ],
         [
-          { id: "view:zoom_out", label: "Zoom −" },
+          { id: "view:zoom_out", label: "−" },
           { id: "view:reset", label: "Reset" },
-          { id: "view:zoom_in", label: "Zoom +" },
+          { id: "view:zoom_in", label: "+" },
         ],
         [
-          { id: "view:rotate_left", label: "↺ Turn" },
-          { id: "view:rotate_right", label: "Turn ↻" },
+          { id: "view:rotate_left", label: "↺" },
+          { id: "view:focus", label: "Focus" },
+          { id: "view:rotate_right", label: "↻" },
         ],
         SITES.map((s) => ({ id: `site:${s.siteId}`, label: s.short, style: s.siteId === site?.siteId && this.env.mode === "region" ? ("chip" as const) : ("secondary" as const) })),
         [
