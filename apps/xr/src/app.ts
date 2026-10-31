@@ -33,7 +33,7 @@ import { sceneToTile, tileToScene } from "./scene/tabletop.js";
 import { loadSite } from "./scene/terrain.js";
 import type { LoadedSite } from "./scene/terrain.js";
 import type { World } from "./scene/world.js";
-import { agentName, cardModel, REASON_CHIPS } from "./ui/findingView.js";
+import { agentName, cardModel, comparisonLines, REASON_CHIPS } from "./ui/findingView.js";
 import type { RingState } from "./ui/findingView.js";
 import {
   AgentActivityPanel,
@@ -47,7 +47,7 @@ import {
 } from "./ui/spatial/index.js";
 import type { ButtonSpec, MarkerState, PanelContent, PanelLine } from "./ui/spatial/index.js";
 
-type Screen = "pair" | "welcome" | "globe" | "idle" | "measure" | "mark" | "selected" | "researching" | "finding" | "reason" | "sources" | "evidence" | "logbook" | "clarify";
+type Screen = "pair" | "welcome" | "globe" | "idle" | "measure" | "mark" | "selected" | "researching" | "finding" | "reason" | "sources" | "evidence" | "compare" | "logbook" | "clarify";
 
 export interface AppOptions {
   emulated: boolean;
@@ -86,7 +86,7 @@ export interface AppState {
 /** Default seated layout (INTERACTION.md §3); ar/stage.ts moves it to wherever the explorer is placed. */
 const LAYOUT = {
   face: { x: 0, y: 1.2, z: 0 },
-  main: { x: 0.38, y: 1.0, z: -0.42 },
+  main: { x: 0.38, y: 1.02, z: -0.42 },
   captions: { x: 0.38, y: 0.7, z: -0.42 },
   evidence: { x: -0.4, y: 1.1, z: -0.46 },
   wristDock: { x: -0.42, y: 0.76, z: -0.22 },
@@ -635,6 +635,8 @@ export class NexusApp {
         return this.go("sources");
       case "evidence":
         return this.go("evidence");
+      case "compare":
+        return this.go("compare");
       case "close":
         this.selected = undefined;
         this.repaintRings();
@@ -1167,6 +1169,10 @@ export class NexusApp {
         if (!this.evidenceData || this.evidenceData.siteId !== this.site?.siteId) void this.loadEvidence();
         break;
       }
+      case "compare":
+        lines.push(...(finding ? comparisonLines(finding) : []));
+        rows.push([{ id: "back:finding", label: "Back" }, { id: "card:evidence", label: "Evidence", style: "chip" }]);
+        break;
       case "logbook":
         lines.push({ text: "Logbook", tone: "title" });
         if (this.logbookEntries.length === 0) lines.push({ text: "No reviews yet.", tone: "muted" });

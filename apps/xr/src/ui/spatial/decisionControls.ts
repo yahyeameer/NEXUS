@@ -11,11 +11,13 @@ export const DECISIONS = [
 
 /**
  * Rows for a finding card, bottom-up as SpatialGlassPanel lays them out: the action row first, then the decision row
- * only while the finding waits for review, and a "Hear it" chip only when the SIE approved the briefing for speech.
+ * only while the finding waits for review, a "Hear it" chip only when the SIE approved the briefing for speech, and
+ * "Compare" only when there are interpretations or hypotheses to set side by side.
  */
-export function decisionControls(card: { reviewable: boolean; speakable: boolean }, speaking: boolean): ButtonSpec[][] {
+export function decisionControls(card: { reviewable: boolean; speakable: boolean; comparable?: boolean }, speaking: boolean): ButtonSpec[][] {
   const actions: ButtonSpec[] = [
     ...(card.speakable ? [{ id: "card:hear", label: speaking ? "Stop" : "Hear it", style: "chip" as const }] : []),
+    ...(card.comparable ? [{ id: "card:compare", label: "Compare", style: "chip" as const }] : []),
     { id: "card:evidence", label: "Evidence", style: "chip" },
     { id: "card:sources", label: "Sources", style: "chip" },
     { id: "card:close", label: "Close" },

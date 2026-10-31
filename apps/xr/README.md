@@ -59,6 +59,8 @@ fingertip-poke and palm-up paths), or `?devui=0` for the test setup.
 | Measure | On the site card poke **Measure**, then pinch two points. Distance, height difference, mean gradient and the elevation range come from the full DEM by `packages/terrain` `lineMeasurement`, shown with method and source. A measurement, not a finding |
 | Mark a spot | Poke **Mark a spot**, pinch anywhere, poke what you see, **Save**. It is stored as your observation (`OBS-…`) in your words and does not start research |
 | Focus | Select a feature, then **Focus** (card or wrist menu): it glides to the middle and is magnified. **Reset** returns to the whole site |
+| Read a finding | The card shows the research status, observation ID, claim category, the integrity check's decision (and whether Jev or the rule-based fallback made it), uncertainty, the summary, each claim with its type, supporting and contradicting evidence IDs and the source datasets. **More** pages through a long card |
+| Compare readings | On a finding that carries an interpretation or hypothesis poke **Compare**: each reading with the evidence for and against it, side by side. Nothing is ranked; weighing them is yours |
 | Open evidence | On a finding card poke **Evidence**, then a chip. The source opens beside the card with its credit, licence and image crop |
 | Describe what you see | After selecting, poke descriptor chips. They are saved with the observation as your words |
 | Talk (optional) | Hold **Hold to talk** on the wrist menu. Your desktop mic streams while held. Type your words in the **Simulated speech** box before you release, since no STT provider is chosen yet |
@@ -138,9 +140,12 @@ colours (dark translucent glass, one restrained cyan accent, amber only for "nee
 | Component | What it is |
 | --- | --- |
 | `SpatialGlassPanel` | Base panel: canvas-drawn glass card with poke/ray buttons ≥ 4 cm, open/close fades and glides. A panel only reports button targets once it has settled, so a fingertip never chases a moving button |
-| `ScientificFindingPanel` | The main card. Rises out of the selected feature, glides to its comfortable dock and stays tethered to the feature |
+| `ScientificFindingPanel` | The main card. Rises out of the selected feature, glides to its comfortable dock and stays tethered to the feature. Its lines come from `cardModel` in `src/ui/findingView.ts` |
+| Claim badges | Observation (slate), measurement (cyan), interpretation (violet) and hypothesis (amber), always labelled in words too. An interpretation or hypothesis finding carries a line saying it is not an established result (`BADGE` in `tokens.ts`) |
+| `UncertaintyIndicator` | A three-step meter badge (●○○ / ●●○ / ●●●) next to the level and explanation, neutral, amber or red (`uncertaintyBadge`) |
+| `HypothesisComparison` | The **Compare** screen: every interpretation and hypothesis the finding holds, with its evidence for and against (`comparisonEntries`, `comparisonLines`) |
 | `AgentActivityPanel` | Display-only card over the feature under investigation: which agents are working, done or stopped |
-| `EvidenceViewer` | Evidence window with credit, licence and archival label, plus an evidence beam to the feature |
+| `EvidenceViewer` | Evidence window with credit, licence and archival label, plus an evidence beam (the evidence connector) to the feature |
 | `ScientificDecisionControls` | Approve / Reject / Inconclusive and the card's action row, in one place so the wording stays within AGENTS.md |
 | `ObservationMarker` | Ring, halo, stem and bead on the terrain; colour follows the research state, swells under the pointer |
 | `RockSelectionOutline` | Glowing line draped on the DEM around the selected feature's real footprint (rim, patch or rille course) |

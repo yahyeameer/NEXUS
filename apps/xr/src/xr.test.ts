@@ -6,7 +6,7 @@ import { PokeTracker } from "./input/poke.js";
 import { Diorama } from "./scene/diorama.js";
 import { distanceToFeature, featureCenter, pickFeature } from "./scene/featurePick.js";
 import { sceneToTile, tileFrame, tileToScene } from "./scene/tabletop.js";
-import { agentName, cardModel, ringFor } from "./ui/findingView.js";
+import { agentName, cardModel, comparisonEntries, comparisonLines, ringFor, uncertaintyBadge } from "./ui/findingView.js";
 import { wrapText } from "./ui/textLayout.js";
 
 const base = { siteId: "TEST_SITE", label: "x", spokenLabel: "x", aliases: [] };
@@ -120,20 +120,83 @@ const finding: ScientificFinding = {
 describe("finding card", () => {
   it("shows typed claims, uncertainty and removed claims, and offers review only while awaiting it", () => {
     const card = cardModel(finding);
-    expect(card.lines.find((l) => l.badge === "Measurement")?.text).toBe("Depth is about 30 m.");
+    expect(card.lines.find((l) => l.badge === "Measurement" && l.tone === "body")?.text).toBe("Depth is about 30 m.");
     expect(card.lines.some((l) => l.text === "Removed: no evidence. A dropped claim.")).toBe(true);
-    expect(card.lines.some((l) => l.text.startsWith("Uncertainty medium"))).toBe(true);
+    expect(card.lines.find((l) => l.badge === "Uncertainty ●●○")?.text).toBe("medium: Test.");
     expect(card).toMatchObject({ reviewable: true, speakable: true, ring: "ready" });
     expect(cardModel({ ...finding, status: "reviewed" })).toMatchObject({ reviewable: false, ring: "reviewed" });
     expect(cardModel({ ...finding, spokenBriefing: { script: "", sentenceEvidence: [], speakerAgentId: "x", voiceDecision: "SILENT_CARD_ONLY" } }).speakable).toBe(false);
   });
   it("never uses certainty words in its own labels (AGENTS.md §10)", () => {
-    for (const status of ["researching", "ready_for_review", "reviewed", "rejected", "inconclusive"] as const) {
-      const text = cardModel({ ...finding, status, claims: [], removedClaims: [], summary: "" })
+    const variants = (["researching", "ready_for_review", "reviewed", "rejected", "inconclusive"] as const).flatMap((status) =>
+      (["ACCEPT_FOR_REVIEW", "REQUEST_MORE_EVIDENCE", "REJECT", "ESCALATE_TO_SCIENTIST"] as const).flatMap((outcome) =>
+        (["observation", "measurement", "interpretation", "hypothesis"] as const).map((claimType) => ({ status, outcome, claimType })),
+      ),
+    );
+    for (const { status, outcome, claimType } of variants) {
+      const text = cardModel({ ...finding, status, claimType, decision: { outcome, reason: "", source: "jev" }, claims: [], removedClaims: [], summary: "" })
         .lines.map((l) => `${l.badge ?? ""} ${l.text}`)
         .join(" ");
       expect(text).not.toMatch(/\b(prov(e|es|ed|en|ing)|proof|confirm(s|ed|ing)?|discover(s|ed|y)?)\b/i);
     }
+  });
+  it("shows every field the scientist needs to judge it (PRD §6.6)", () => {
+    const text = cardModel({ ...finding, claims: [...finding.claims, { text: "Against.", claimType: "observation", evidenceIds: ["EV-TEST-002"], contradictingEvidenceIds: ["EV-TEST-003"] }] })
+      .lines.map((l) => `${l.badge ?? ""} ${l.text}`)
+      .join("\n");
+    expect(text).toContain("Observation OBS-1");
+    expect(text).toContain("Measurement Observation OBS-1");
+    expect(text).toContain("Research status: Ready for your review · AI-generated");
+    expect(text).toContain("Integrity check Passed for your review: ok (rule-based fallback)");
+    expect(text).toContain("Supporting evidence: EV-TEST-001, EV-TEST-002");
+    expect(text).toContain("Contradicting evidence: EV-TEST-003");
+    expect(text).toContain("Source datasets: Test DTM");
+    expect(cardModel(finding).lines.some((l) => l.text === "Contradicting evidence: none recorded")).toBe(true);
+  });
+  it("colours each claim type apart and marks interpretations and hypotheses as unestablished", () => {
+    const f: ScientificFinding = {
+      ...finding,
+      claimType: "hypothesis",
+      claims: [
+        { text: "Seen.", claimType: "observation", evidenceIds: ["EV-A"] },
+        { text: "Read.", claimType: "interpretation", evidenceIds: ["EV-B"] },
+        { text: "Guess.", claimType: "hypothesis", evidenceIds: ["EV-C"] },
+      ],
+    };
+    const card = cardModel(f);
+    expect(card.lines.filter((l) => l.badgeTone && l.tone === "body").map((l) => l.badgeTone)).toEqual(["observation", "interpretation", "hypothesis"]);
+    expect(card.lines.some((l) => l.text.startsWith("AI hypothesis: untested"))).toBe(true);
+    expect(cardModel(finding).lines.some((l) => l.text.startsWith("AI hypothesis") || l.text.startsWith("AI interpretation"))).toBe(false);
+    expect(card.comparable).toBe(true);
+    expect(cardModel(finding).comparable).toBe(false);
+  });
+  it("flags a held-back integrity decision and names its source", () => {
+    const card = cardModel({ ...finding, decision: { outcome: "REQUEST_MORE_EVIDENCE", reason: "thin", source: "jev" } });
+    expect(card.lines.find((l) => l.badge === "Integrity check")).toEqual({ text: "More evidence requested: thin (Jev decision)", tone: "warn", badge: "Integrity check" });
+  });
+  it("scales the uncertainty meter with the level", () => {
+    expect(uncertaintyBadge("low")).toEqual({ badge: "Uncertainty ●○○", badgeTone: "uncertainty-low" });
+    expect(uncertaintyBadge("high")).toEqual({ badge: "Uncertainty ●●●", badgeTone: "uncertainty-high" });
+  });
+  it("compares readings with the evidence for and against each, and says when there is no rival", () => {
+    const f: ScientificFinding = {
+      ...finding,
+      claims: [{ text: "Degraded crater.", claimType: "interpretation", evidenceIds: ["EV-A"], measurementIds: ["MEAS-1"] }],
+      possibleInterpretations: [{ explanation: "Secondary crater.", supportingEvidenceIds: ["EV-B"], contradictingEvidenceIds: ["EV-C"] }],
+    };
+    expect(comparisonEntries(f)).toEqual([
+      { claimType: "interpretation", text: "Degraded crater.", supporting: ["MEAS-1", "EV-A"], contradicting: [] },
+      { claimType: "interpretation", text: "Secondary crater.", supporting: ["EV-B"], contradicting: ["EV-C"] },
+    ]);
+    const text = comparisonLines(f).map((l) => l.text);
+    expect(text).toContain("Against: none recorded");
+    expect(text).toContain("Against: EV-C");
+    expect(comparisonLines({ ...f, possibleInterpretations: [] }).map((l) => l.text)).toContain("Only one reading was recorded, so there is no rival to compare it with.");
+  });
+  it("never presents a reading as settled in the comparison (AGENTS.md §10)", () => {
+    const f: ScientificFinding = { ...finding, possibleInterpretations: [{ explanation: "x", supportingEvidenceIds: [], contradictingEvidenceIds: [] }] };
+    const text = comparisonLines(f).map((l) => `${l.badge ?? ""} ${l.text}`).join(" ");
+    expect(text).not.toMatch(/\b(prov(e|es|ed|en|ing)|proof|confirm(s|ed|ing)?|discover(s|ed|y)?)\b/i);
   });
   it("maps a request for more evidence to the dashed-amber state", () => {
     expect(ringFor({ status: "researching", decision: { ...finding.decision, outcome: "REQUEST_MORE_EVIDENCE" } })).toBe("needs_evidence");

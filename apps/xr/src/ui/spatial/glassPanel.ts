@@ -5,8 +5,8 @@ import { CanvasTexture, DoubleSide, Mesh, MeshBasicMaterial, PlaneGeometry, SRGB
 import type { Object3D } from "three";
 import type { Rect } from "../../input/poke.js";
 import { wrapText } from "../textLayout.js";
-import { BUTTON, COLOR, FONT_FAMILY, MOTION, SPACE, TYPE } from "./tokens.js";
-import type { ButtonTone, TextTone } from "./tokens.js";
+import { BADGE, BUTTON, COLOR, FONT_FAMILY, MOTION, SPACE, TYPE } from "./tokens.js";
+import type { BadgeTone, ButtonTone, TextTone } from "./tokens.js";
 
 export type ButtonStyle = ButtonTone;
 
@@ -20,6 +20,8 @@ export interface PanelLine {
   text: string;
   tone: TextTone;
   badge?: string;
+  /** Badge colour; claim types and uncertainty levels each have one (tokens.ts BADGE). */
+  badgeTone?: BadgeTone;
 }
 
 export interface PanelContent {
@@ -274,10 +276,11 @@ export class SpatialGlassPanel {
       let x = MARGIN * s;
       if (l.badge) {
         const bw = ctx.measureText(l.badge).width + 0.008 * s;
-        ctx.fillStyle = COLOR.badgeBg;
+        const tone = BADGE[l.badgeTone ?? "default"];
+        ctx.fillStyle = tone.bg;
         roundRect(ctx, x, y - 0.001 * s, bw, f.size * 1.25 * s, 0.003 * s);
         ctx.fill();
-        ctx.fillStyle = COLOR.badgeFg;
+        ctx.fillStyle = tone.fg;
         ctx.fillText(l.badge, x + 0.004 * s, y);
         x += bw + 0.004 * s;
       }
@@ -333,7 +336,7 @@ export class SpatialGlassPanel {
       ctx.font = font(l.tone);
       const badgeW = l.badge ? ctx.measureText(l.badge).width + 0.012 * s : 0;
       const wrapped = wrapText(l.text, (this.widthM - 2 * MARGIN) * s - badgeW, (t) => ctx.measureText(t).width);
-      wrapped.forEach((t, i) => out.push({ text: t, tone: l.tone, badge: i === 0 ? l.badge : undefined, gapAfter: i === wrapped.length - 1 }));
+      wrapped.forEach((t, i) => out.push({ text: t, tone: l.tone, badge: i === 0 ? l.badge : undefined, badgeTone: l.badgeTone, gapAfter: i === wrapped.length - 1 }));
     }
     return out;
   }

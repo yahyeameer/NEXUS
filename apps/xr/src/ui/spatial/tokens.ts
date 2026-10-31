@@ -28,6 +28,24 @@ export const HEX = {
   agent: 0x9fe7ff,
 } as const;
 
+/**
+ * Badge colours. Claim types differ in hue so an observation, a code-computed measurement, an interpretation and a
+ * hypothesis never look alike (PRD §6.6); the label inside the badge always says which, so colour is never the only cue.
+ * Uncertainty badges run neutral → amber → red with the level. All muted: no neon.
+ */
+export const BADGE = {
+  default: { bg: COLOR.badgeBg, fg: COLOR.badgeFg },
+  observation: { bg: "rgba(139, 155, 176, 0.2)", fg: "#dbe4ef" },
+  measurement: { bg: "rgba(79, 216, 255, 0.16)", fg: "#bdefff" },
+  interpretation: { bg: "rgba(160, 140, 235, 0.2)", fg: "#ddd3ff" },
+  hypothesis: { bg: "rgba(255, 184, 77, 0.18)", fg: "#ffdca3" },
+  "uncertainty-low": { bg: "rgba(139, 155, 176, 0.2)", fg: "#dbe4ef" },
+  "uncertainty-medium": { bg: "rgba(255, 184, 77, 0.18)", fg: "#ffdca3" },
+  "uncertainty-high": { bg: "rgba(229, 120, 130, 0.22)", fg: "#ffccd1" },
+} as const;
+
+export type BadgeTone = keyof typeof BADGE;
+
 export type ButtonTone = "primary" | "secondary" | "chip" | "danger" | "active";
 
 export const BUTTON: Record<ButtonTone, { top: string; bottom: string; rim: string; fg: string }> = {

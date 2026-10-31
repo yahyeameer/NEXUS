@@ -45,6 +45,11 @@ test("pair, select, investigate, review and read the logbook with hands only", a
   await pinchAt(page, "feature/ELBOW_CRATER");
   await poke(page, "main/sel:investigate");
   await expect.poll(async () => (await state(page)).findings.ELBOW_CRATER?.status, { timeout: 60_000 }).toBe("ready_for_review");
+  // Elbow's finding is an interpretation, so the card offers its readings side by side; back to the card to review.
+  await poke(page, "main/card:compare");
+  await expect.poll(async () => (await state(page)).screen).toBe("compare");
+  await poke(page, "main/back:finding");
+  await expect.poll(async () => (await state(page)).screen).toBe("finding");
   await poke(page, "main/card:approve");
   await expect.poll(async () => (await state(page)).findings.ELBOW_CRATER?.status).toBe("reviewed");
 

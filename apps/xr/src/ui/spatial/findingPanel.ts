@@ -23,7 +23,7 @@ export class ScientificFindingPanel extends SpatialGlassPanel {
   private attachedTo?: string;
 
   constructor(dock: Vector3, face: Vector3) {
-    super("main", 0.4, 0.42);
+    super("main", 0.4, 0.48);
     this.dock.copy(dock);
     this.face.copy(face);
     this.place(dock, face);
