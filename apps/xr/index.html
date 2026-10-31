@@ -2,13 +2,14 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0b0d10" />
     <title>NEXUS</title>
   </head>
   <body>
-    <div class="hud">
-      <button id="enter" type="button" disabled>Enter XR</button>
-      <p id="status" role="status">Loading…</p>
+    <!-- Phone AR shows this element over the camera (WebXR DOM overlay); the 3D viewer shows it over the canvas. -->
+    <div id="overlay" class="overlay">
+      <p id="status" role="status" class="debug-status">Loading…</p>
     </div>
     <main id="app"></main>
     <script type="module" src="/src/main.ts"></script>

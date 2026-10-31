@@ -1,0 +1,62 @@
+{
+  "assetFile": "10022-53.glb",
+  "sample": "10022,53",
+  "classification": "High-Ti, High-K Ilmenite Basalt",
+  "origin": "Moon",
+  "collected": "LM Site, Mare Tranquilitatis, Apollo 11",
+  "collection": "Apollo 11",
+  "source": {
+    "organization": "NASA Astromaterials 3D (ARES Acquisition & Curation Office, Johnson Space Center)",
+    "pageUrl": "https://ares.jsc.nasa.gov/astromaterials3d/sample-details.htm?sample=10022-53",
+    "file": "10022-53_SFM_Web-Resolution-Model_Coordinate-Registered.zip",
+    "fileUrl": "https://ares-a3d.s3.us-gov-east-1.amazonaws.com/samples/10022-53/2b_10022-53_SFM_Web-Resolution-Model_Coordinate-Registered/10022-53_SFM_Web-Resolution-Model_Coordinate-Registered.zip",
+    "bytes": 6653405,
+    "sha256": "c1d1a3f87697e524a8845d0197eb5fb9e8d369c4e5b76f78c2b3d44cdaad3c0b",
+    "downloadedAt": "2026-10-31",
+    "sourceModel": "Web-resolution photogrammetry (SfM) model, coordinate-registered, 199,766 faces",
+    "modelParameters": {
+      "photographyCaptured": "2019:05:15",
+      "camera": "Hasselblad H4D-60; Lens: HC 120 II; Mega Pixels: 60; Photos: 240; Total Size: 80.5 GB",
+      "scale": "Units: Meters; Targets: 39; Bars: 381; Total Error: .000143 meters",
+      "acknowledgment": "These 3D reconstructed image data were produced at the Lunar Sample Laboratory Facility for Astromaterials 3D in NASA’s Acquisition & Curation Office and were funded by NASA Planetary Data Archiving, Restoration, and Tools Program, Proposal No.: 15-PDART15_2-0041."
+    },
+    "alsoListedAt": {
+      "url": "https://sketchfab.com/3d-models/0650d0ed3e3944438638f58f9534f2a9",
+      "account": "Astromaterials3D",
+      "license": "CC0 Public Domain",
+      "note": "Same NASA model. Sketchfab downloads need a signed-in account, so the file was taken from NASA's bucket."
+    }
+  },
+  "credit": "NASA/Astromaterials 3D",
+  "license": "CC0 Public Domain (Sketchfab listing). NASA media are generally not copyrighted in the United States; keep the credit and follow NASA's media usage guidelines.",
+  "derivation": {
+    "script": "scripts/data/build_lunar_samples.py",
+    "change": "OBJ to glTF (obj2gltf 3), vertices welded and simplified to about 30,000 triangles with meshoptimizer (@gltf-transform/cli 4, error 0.01), colour map resized to 2048 x 2048 and stored as JPEG quality 88. Units (metres) and NASA's coordinate registration are unchanged.",
+    "bytes": 1254772,
+    "sha256": "01bfdece9f3fc65bac7c589a91d425f990a8413a159626d22f42749d1fd38924",
+    "triangles": 29984,
+    "vertices": 22658,
+    "boundingBoxM": {
+      "min": [
+        -0.018587,
+        -0.008654,
+        -0.018933
+      ],
+      "max": [
+        0.010178,
+        0.022453,
+        0.019833
+      ]
+    },
+    "extentCm": [
+      2.9,
+      3.1,
+      3.9
+    ],
+    "textureSize": [
+      2048,
+      2048
+    ]
+  },
+  "use": "A laboratory specimen returned to Earth, shown at its true size. It is reference material: the app never derives measurements of lunar terrain from it, and it is not evidence about a site unless an evidence pack cites it."
+}

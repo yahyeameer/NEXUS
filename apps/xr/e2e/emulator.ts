@@ -19,6 +19,8 @@ export interface XrState {
   descriptors: string[];
   evidenceOpen?: string;
   orbs: number;
+  tools: { measure: string; measurement?: { horizontalM: number; heightDifferenceM: number; gradientDeg: number }; markPending: boolean; savedObservations: string[]; focus?: string };
+  ar: { mode: string; phase: string; surface: string; surfaceFound: boolean; anchor: string; tracking: boolean; environment: string; regionMarked: boolean };
 }
 
 interface Hooks {
@@ -29,10 +31,14 @@ interface Hooks {
 }
 type HookWindow = Window & { __nexus: Hooks };
 
-export async function enterXr(page: Page): Promise<void> {
-  await page.goto("/?devui=0");
-  await expect(page.locator("#enter")).toBeEnabled();
-  await page.locator("#enter").click();
+/**
+ * Opens the app in the emulator straight onto a site's terrain and enters through the launch screen's "Explore in
+ * 3D" (the emulated headset keeps its seated layout, so targets sit where the hands can reach them).
+ */
+export async function enterXr(page: Page, site = "HADLEY_RILLE"): Promise<void> {
+  await page.goto(`/?devui=0&site=${site}`);
+  await expect(page.locator("#enter-3d")).toBeEnabled();
+  await page.locator("#enter-3d").click();
   await expect.poll(() => page.evaluate(() => (window as unknown as HookWindow).__nexus.targets().length)).toBeGreaterThan(0);
 }
 

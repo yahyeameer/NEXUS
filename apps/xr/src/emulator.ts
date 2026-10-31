@@ -4,6 +4,7 @@ import { metaQuest3, XRDevice } from "iwer";
 import type { TargetResolver } from "iwer";
 import { Matrix4, Quaternion, Vector3 } from "three";
 import type { NexusApp } from "./app.js";
+import { simulatedSpeechBox } from "./web/simulatedSpeech.js";
 
 export interface Emulator {
   device: XRDevice;
@@ -11,13 +12,17 @@ export interface Emulator {
   takeSimulatedTranscript: () => string | undefined;
 }
 
-export async function installEmulator(opts: { devUi: boolean }): Promise<Emulator> {
+export async function installEmulator(opts: { devUi: boolean; desktop?: boolean }): Promise<Emulator> {
   const device = new XRDevice(metaQuest3);
   // Desktop Chrome exposes navigator.xr with no device behind it; replace it.
   device.installRuntime({ forceInstall: true });
   device.primaryInputMode = "hand";
   // Seated eye height, looking at the desk (scene/world.ts).
   device.position.set(0, 1.2, 0);
+  // Desktop view only: lean back a little and tilt the head about 23° so the diorama and both panels sit in the middle of the window.
+  if (opts.desktop) device.position.set(0, 1.22, 0.12);
+  const pitch = opts.desktop ? -0.37 : 0;
+  device.quaternion.set(Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2));
   if (opts.devUi) {
     // Keyboard and mouse control of the head and both hands; lazy so tests and the headset never load it.
     const { DevUI } = await import("@iwer/devui");
@@ -53,22 +58,4 @@ export async function aimHand(device: XRDevice, app: NexusApp, name: string, han
 
 function xyz(v: Vector3): { x: number; y: number; z: number } {
   return { x: v.x, y: v.y, z: v.z };
-}
-
-/** A small desktop box for typed "speech", clearly labelled as simulated (AGENTS.md rule 7 spirit). */
-function simulatedSpeechBox(): () => string | undefined {
-  const box = document.createElement("form");
-  box.className = "sim-speech";
-  box.innerHTML = `
-    <label for="sim-speech">Simulated speech <span>(emulator only)</span></label>
-    <input id="sim-speech" name="speech" autocomplete="off" placeholder="e.g. investigate this" maxlength="500" />
-    <small>Hold “Hold to talk” on the wrist menu; on release this text is sent as your words. Your desktop mic still streams while held.</small>`;
-  box.addEventListener("submit", (e) => e.preventDefault());
-  document.body.append(box);
-  const input = box.querySelector("input");
-  return () => {
-    const text = input?.value.trim();
-    if (input) input.value = "";
-    return text || undefined;
-  };
 }

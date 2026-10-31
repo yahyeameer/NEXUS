@@ -1,0 +1,34 @@
+{
+  "assetFile": "moon_globe_2k.glb",
+  "title": "Moon 3D Models for Web, AR, and Animation",
+  "source": {
+    "organization": "NASA Scientific Visualization Studio",
+    "svsId": 14959,
+    "pageUrl": "https://svs.gsfc.nasa.gov/14959/",
+    "file": "moon_small.glb",
+    "fileUrl": "https://svs.gsfc.nasa.gov/vis/a010000/a014900/a014959/moon_small.glb",
+    "bytes": 13799876,
+    "sha256": "12d3b0bb7fe214903f51447d1bc61710f442e92a11c703fcaca6d4e7ff8e67d4",
+    "downloadedAt": "2026-10-31",
+    "pageReleased": "2026-01-29",
+    "pageUpdated": "2026-04-01"
+  },
+  "credit": "NASA's Goddard Space Flight Center",
+  "dataSource": "Lunar Reconnaissance Orbiter (LRO)",
+  "colorMap": "From NASA SVS CGI Moon Kit (SVS 4720), centred on 0° longitude, as stated on the SVS 14959 page",
+  "license": "Not stated on the SVS 14959 page. NASA media are generally not copyrighted; follow NASA's media usage guidelines and keep the credit line.",
+  "derivation": {
+    "script": "scripts/data/build_moon_globe.py",
+    "change": "Colour map re-encoded from 4096x4096 PNG to 2048x2048 JPEG (quality 90) to fit the Quest texture budget (AGENTS.md section 6). Geometry, UVs and material are NASA's, copied byte for byte.",
+    "bytes": 2242724,
+    "sha256": "f3f2eedbb63b0eaa203cc9bf51acfb5c8e00fc209acc59d8ec40772ea7771243"
+  },
+  "geometry": {
+    "mesh": "Cube sphere (node 'Cube'), 46,464 vertices, flat (no displacement)",
+    "modelRadius": 1.27186,
+    "modelUnits": "Not stated by the source. The app scales the globe to a display size and never reads lunar distances from it.",
+    "orientation": "+Y is lunar north; the near side (0° N, 0° E) faces -Z; +90° E faces -X. Determined by the NEXUS team by rendering the model from each axis and matching the near-side maria, Tycho and Mare Orientale; it is not stated by the source.",
+    "knownLimits": "Flat colour sphere: no topography. The SVS page notes pinched poles on its grid and topo variants."
+  },
+  "coordinateReferenceSystem": "Not stated by the source. Lat/lon placement on the globe uses the orientation above with planetocentric coordinates; it is approximate at globe scale and not for measurement."
+}

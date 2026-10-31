@@ -55,6 +55,11 @@ export class AgentOrbs {
     this.fadeAt = now + 6000;
   }
 
+  /** Each agent's state, for the AgentActivityPanel. */
+  states(): Map<string, OrbState> {
+    return new Map([...this.orbs].map(([id, o]) => [id, o.state]));
+  }
+
   get count(): number {
     return this.orbs.size;
   }

@@ -3,7 +3,7 @@
 import { BufferGeometry, Line, LineBasicMaterial, Mesh, MeshBasicMaterial, Quaternion, Raycaster, SphereGeometry, Vector3 } from "three";
 import type { Group, Object3D, WebGLRenderer, XRHandSpace, XRTargetRaySpace } from "three";
 import { XRHandModelFactory } from "three/addons/webxr/XRHandModelFactory.js";
-import type { Panel } from "../ui/panel.js";
+import type { SpatialGlassPanel as Panel } from "../ui/spatial/glassPanel.js";
 import { isTap, TAP_MAX_MOVE_M, yawDelta } from "./manipulate.js";
 import type { Point2 } from "./manipulate.js";
 import { PokeTracker } from "./poke.js";
@@ -34,6 +34,9 @@ interface Slot {
   cursor: Mesh;
   pokes: Map<Panel, PokeTracker>;
   rayHeld?: { panel: Panel; id: string };
+  /** The button the ray rests on, for hover feedback. */
+  hover?: { panel: Panel; id: string };
+  model: Object3D;
   /** A pinch that started on the terrain: a tap selects, a drag turns or zooms. */
   grab?: { point: Vector3; start: Vector3; last: Vector3; maxMove: number; dragging: boolean };
   hit: RayHit;
@@ -61,17 +64,19 @@ export class HandInput {
     for (const i of [0, 1]) {
       const ray = renderer.xr.getController(i);
       const hand = renderer.xr.getHand(i);
-      hand.add(factory.createHandModel(hand, "spheres"));
+      const model = factory.createHandModel(hand, "spheres");
+      hand.add(model);
       const line = new Line(new BufferGeometry().setFromPoints([new Vector3(), new Vector3(0, 0, -1)]), new LineBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.7 }));
       line.scale.z = RAY_LENGTH_M;
       ray.add(line);
-      const cursor = new Mesh(new SphereGeometry(0.006, 12, 8), new MeshBasicMaterial({ color: 0xffffff, depthTest: false }));
+      const cursor = new Mesh(new SphereGeometry(0.007, 12, 8), new MeshBasicMaterial({ color: 0x8fe3ff, depthTest: false }));
       cursor.renderOrder = 3;
       cursor.visible = false;
       parent.add(ray, hand, cursor);
-      const slot: Slot = { ray, hand, line, cursor, pokes: new Map(), hit: { onUi: false } };
+      const slot: Slot = { ray, hand, line, cursor, model, pokes: new Map(), hit: { onUi: false } };
       ray.addEventListener("connected", (e) => {
         slot.handedness = e.data.handedness === "left" ? "left" : "right";
+        ray.userData.handedness = slot.handedness;
       });
       ray.addEventListener("disconnected", () => {
         slot.handedness = undefined;
@@ -84,12 +89,21 @@ export class HandInput {
 
   /** Per-frame: fingertip pokes and ray hover. */
   update(): void {
-    const panels = this.hooks.panels().filter((p) => p.mesh.visible);
+    const panels = this.hooks.panels().filter((p) => p.interactive);
     for (const slot of this.slots) {
       this.updatePokes(slot, panels);
       this.updateRay(slot, panels);
     }
+    for (const panel of panels) panel.hover(this.slots.find((s) => s.hover?.panel === panel)?.hover?.id);
     this.updateGrabs();
+  }
+
+  private showRays = true;
+
+  /** Desktop mode drives the hand with a mouse, so the hand spheres and the ray lines are only in the way; the cursor stays. */
+  setDesktop(desktop: boolean): void {
+    this.showRays = !desktop;
+    for (const slot of this.slots) slot.model.visible = !desktop;
   }
 
   private updateGrabs(): void {
@@ -163,12 +177,14 @@ export class HandInput {
 
   private updateRay(slot: Slot, panels: Panel[]): void {
     const active = slot.handedness !== undefined && slot.ray.visible;
-    slot.line.visible = active;
+    slot.line.visible = active && this.showRays;
     slot.cursor.visible = false;
     slot.hit = { onUi: false };
+    slot.hover = undefined;
     if (!active) return;
     const hit = this.cast(slot, panels);
     if (!hit) return;
+    if (hit.panel && hit.buttonId) slot.hover = { panel: hit.panel, id: hit.buttonId };
     slot.cursor.visible = true;
     slot.cursor.position.copy(hit.point);
     slot.line.scale.z = Math.max(0.01, hit.distance);
@@ -182,8 +198,15 @@ export class HandInput {
     this.raycaster.ray.direction.copy(tmpDir).negate();
     this.raycaster.far = RAY_LENGTH_M;
     const terrain = this.hooks.terrain();
-    const hits = this.raycaster.intersectObjects(terrain ? [...panels.map((p) => p.mesh), terrain] : panels.map((p) => p.mesh), false);
-    const first = hits[0];
+    const hits = this.raycaster.intersectObjects(panels.map((p) => p.mesh), false);
+    // The terrain is a group of tiles (and the globe a mesh inside its model), so it is searched recursively.
+    if (terrain) {
+      hits.push(...this.raycaster.intersectObject(terrain, true));
+      hits.sort((a, b) => a.distance - b.distance);
+    }
+    // Panels draw over the terrain (depthTest off), so a ray takes the panel it visibly crosses even when a corner
+    // of the zoomed diorama is physically nearer.
+    const first = hits.find((h) => panels.some((p) => p.mesh === h.object)) ?? hits[0];
     if (!first) return undefined;
     const panel = panels.find((p) => p.mesh === first.object);
     if (!panel) return { point: first.point, distance: first.distance };
@@ -193,7 +216,7 @@ export class HandInput {
   }
 
   private selectStart(slot: Slot): void {
-    const panels = this.hooks.panels().filter((p) => p.mesh.visible);
+    const panels = this.hooks.panels().filter((p) => p.interactive);
     const hit = this.cast(slot, panels);
     if (!hit) return;
     if (hit.panel) {

@@ -7,3 +7,5 @@ data/terrain/**/*.jpg filter=lfs diff=lfs merge=lfs -text
 data/terrain/**/*.ktx2 filter=lfs diff=lfs merge=lfs -text
 data/terrain/**/*.bin filter=lfs diff=lfs merge=lfs -text
 data/evidence-packs/media/*.png filter=lfs diff=lfs merge=lfs -text
+# Planet models (data/planets/<body>/...): NASA-derived glTF binaries
+data/planets/**/*.glb filter=lfs diff=lfs merge=lfs -text

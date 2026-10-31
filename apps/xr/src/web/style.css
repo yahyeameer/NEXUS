@@ -1,0 +1,281 @@
+/* NEXUS web layer: the launch screen, the phone/3D-viewer toolbar and desktop helpers. Graphite and near-black
+   surfaces, one restrained cyan accent, subtle glass. Spatial (in-headset) UI is styled in src/ui/spatial/tokens.ts. */
+:root {
+  color-scheme: dark;
+  --bg: #0b0d10;
+  --bg-2: #14181d;
+  --glass: rgba(18, 22, 28, 0.72);
+  --glass-strong: rgba(14, 17, 22, 0.9);
+  --rim: rgba(120, 214, 235, 0.22);
+  --fg: #eef2f6;
+  --muted: #8d97a3;
+  --accent: #4fd8ff;
+  --accent-deep: #1593b8;
+  --warn: #ffc56b;
+  --font: Inter, "Segoe UI", "SF Pro Text", system-ui, sans-serif;
+}
+html,
+body {
+  margin: 0;
+  height: 100%;
+  color: var(--fg);
+  font-family: var(--font);
+  /* The 3D viewer's backdrop: plain graphite, never an imitation camera feed. */
+  background: radial-gradient(120% 90% at 50% 35%, var(--bg-2) 0%, var(--bg) 70%);
+  overflow: hidden;
+}
+#app canvas {
+  display: block;
+}
+button {
+  font: inherit;
+}
+
+/* Overlay root. Pointer events pass through to the canvas except on controls; phone AR turns them on for gestures. */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  pointer-events: none;
+}
+.overlay > * {
+  pointer-events: auto;
+}
+.overlay.ar-touch {
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* Launch screen */
+.launch {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: radial-gradient(110% 80% at 50% 30%, #181e26 0%, #080a0d 72%);
+}
+.launch[hidden] {
+  display: none;
+}
+.launch-inner {
+  width: min(520px, 100%);
+  text-align: center;
+}
+.launch h1 {
+  margin: 0;
+  font-size: clamp(44px, 9vw, 72px);
+  font-weight: 600;
+  letter-spacing: 0.32em;
+  padding-left: 0.32em;
+  color: var(--fg);
+}
+.launch-sub {
+  margin: 10px 0 36px;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--accent);
+  opacity: 0.85;
+}
+.launch-actions {
+  display: grid;
+  gap: 12px;
+  max-width: 320px;
+  margin: 0 auto;
+}
+.launch-note {
+  margin: 22px auto 0;
+  max-width: 420px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.launch-error {
+  margin: 12px auto 0;
+  max-width: 420px;
+  font-size: 13px;
+  color: var(--warn);
+}
+.launch-credit {
+  margin: 36px 0 0;
+  font-size: 11px;
+  color: #5f6872;
+}
+
+/* Buttons */
+.btn {
+  min-height: 48px;
+  padding: 0 22px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font-size: 15px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 160ms ease, border-color 160ms ease, opacity 160ms ease;
+}
+.btn:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+.btn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.btn-primary {
+  background: linear-gradient(180deg, #1aa9cf, var(--accent-deep));
+  border-color: rgba(142, 234, 255, 0.5);
+  color: #fff;
+}
+.btn-primary:not(:disabled):hover {
+  background: linear-gradient(180deg, #23b9e0, #1a9fc4);
+}
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.14);
+  color: var(--fg);
+}
+.btn-secondary:not(:disabled):hover {
+  border-color: var(--rim);
+}
+.btn-glass {
+  min-height: 44px;
+  padding: 0 16px;
+  background: var(--glass);
+  border-color: var(--rim);
+  color: var(--fg);
+  backdrop-filter: blur(10px);
+}
+.btn-glass:hover {
+  border-color: rgba(120, 214, 235, 0.45);
+}
+
+/* Toolbar and session status, bottom centre and top centre: small, out of the model's way. */
+.toolbar {
+  position: absolute;
+  left: 50%;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  gap: 8px;
+}
+.toolbar[hidden],
+.toolbar [hidden] {
+  display: none;
+}
+.session-chip {
+  position: absolute;
+  left: 50%;
+  top: max(12px, env(safe-area-inset-top));
+  transform: translateX(-50%);
+  margin: 0;
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--rim);
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.session-chip[hidden] {
+  display: none;
+}
+
+/* Debug: status line and capabilities, only with ?debug=1. The status line stays readable to screen readers. */
+.debug-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+.debug-status.debug-visible {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  width: auto;
+  height: auto;
+  clip: auto;
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+.debug-panel {
+  position: fixed;
+  left: 12px;
+  top: 36px;
+  z-index: 2001;
+  max-width: 320px;
+  margin: 0;
+  padding: 8px;
+  border-radius: 8px;
+  background: var(--glass-strong);
+  font-size: 11px;
+  color: var(--muted);
+  pointer-events: none;
+}
+
+/* Desktop helpers (3D viewer and emulator) */
+.sim-speech {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2000;
+  display: grid;
+  gap: 4px;
+  width: min(300px, calc(100vw - 24px));
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--rim);
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+}
+.sim-speech span,
+.sim-speech small {
+  color: var(--muted);
+}
+.sim-speech input {
+  font: inherit;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.3);
+  color: var(--fg);
+}
+.controls {
+  position: fixed;
+  right: 12px;
+  top: 12px;
+  z-index: 2000;
+  max-width: 250px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--rim);
+  background: var(--glass);
+  backdrop-filter: blur(10px);
+  font-size: 12px;
+}
+.controls summary {
+  cursor: pointer;
+  color: var(--accent);
+  letter-spacing: 0.06em;
+}
+.controls dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  margin: 8px 0 2px;
+}
+.controls dt {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.controls dd {
+  margin: 0;
+  color: var(--muted);
+}

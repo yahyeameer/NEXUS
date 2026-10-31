@@ -1,0 +1,62 @@
+{
+  "assetFile": "MIL090036-35.glb",
+  "sample": "MIL 090036,35",
+  "classification": "Lunar Anorthositic Breccia",
+  "origin": "Moon",
+  "collected": "ANSMET Field Season 1990, Miller Range, Antarctica",
+  "collection": "Moon",
+  "source": {
+    "organization": "NASA Astromaterials 3D (ARES Acquisition & Curation Office, Johnson Space Center)",
+    "pageUrl": "https://ares.jsc.nasa.gov/astromaterials3d/sample-details.htm?sample=MIL090036-35",
+    "file": "MIL090036-35_SFM_Web-Resolution-Model_Coordinate-Registered.zip",
+    "fileUrl": "https://ares-a3d.s3.us-gov-east-1.amazonaws.com/samples/MIL090036-35/2b_MIL090036-35_SFM_Web-Resolution-Model_Coordinate-Registered/MIL090036-35_SFM_Web-Resolution-Model_Coordinate-Registered.zip",
+    "bytes": 8036843,
+    "sha256": "2b281ab44c2d1947877f19219e3e66e04fe3eb3096b9398ebbe806b2b3d7d664",
+    "downloadedAt": "2026-10-31",
+    "sourceModel": "Web-resolution photogrammetry (SfM) model, coordinate-registered, 99,862 faces",
+    "modelParameters": {
+      "photographyCaptured": "2019:04:08",
+      "camera": "Hasselblad H4D-60; Lens: HC 120 II; Mega Pixels: 60; Photos: 240; Total Size: 80.5 GB",
+      "scale": "Units: Meters; Targets: 71; Bars: 1085; Total Error: .000108 meters",
+      "acknowledgment": "These 3D reconstructed image data were produced at the Antarctic Meteorite Sample Laboratory Facility for Astromaterials 3D in NASA’s Acquisition & Curation Office and were funded by NASA Planetary Data Archiving, Restoration, and Tools Program, Proposal No.: 15-PDART15_2-0041."
+    },
+    "alsoListedAt": {
+      "url": "https://sketchfab.com/3d-models/fac3f65895d74752a507a151ea56a7e8",
+      "account": "Astromaterials3D",
+      "license": "CC0 Public Domain",
+      "note": "Same NASA model. Sketchfab downloads need a signed-in account, so the file was taken from NASA's bucket."
+    }
+  },
+  "credit": "NASA/Astromaterials 3D",
+  "license": "CC0 Public Domain (Sketchfab listing). NASA media are generally not copyrighted in the United States; keep the credit and follow NASA's media usage guidelines.",
+  "derivation": {
+    "script": "scripts/data/build_lunar_samples.py",
+    "change": "OBJ to glTF (obj2gltf 3), vertices welded and simplified to about 30,000 triangles with meshoptimizer (@gltf-transform/cli 4, error 0.01), colour map resized to 2048 x 2048 and stored as JPEG quality 88. Units (metres) and NASA's coordinate registration are unchanged.",
+    "bytes": 1471808,
+    "sha256": "66b5c10193b58a0fa503d9ae59ac0e8de17cbc8d17b0eccd037eb62dc6245871",
+    "triangles": 29998,
+    "vertices": 16493,
+    "boundingBoxM": {
+      "min": [
+        -0.01877,
+        -0.016835,
+        -0.029794
+      ],
+      "max": [
+        0.01837,
+        0.015268,
+        0.029905
+      ]
+    },
+    "extentCm": [
+      3.7,
+      3.2,
+      6.0
+    ],
+    "textureSize": [
+      2048,
+      2048
+    ]
+  },
+  "use": "A laboratory specimen returned to Earth, shown at its true size. It is reference material: the app never derives measurements of lunar terrain from it, and it is not evidence about a site unless an evidence pack cites it."
+}

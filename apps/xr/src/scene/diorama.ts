@@ -1,5 +1,6 @@
-// The tabletop diorama's pose: yaw and zoom about the table centre. Site geometry is baked in "layout" space
-// (scene/tabletop.ts at rest); this group maps layout ↔ world so picking and anchors stay exact while it moves.
+// The tabletop diorama's pose: placed on a real surface (ar/stage.ts), then turned and zoomed about that point by the
+// scientist. Site geometry is baked in "layout" space (scene/tabletop.ts at rest); this group maps layout ↔ world
+// so picking and anchors stay exact while it moves.
 import { Group, Vector3 } from "three";
 import type { Object3D } from "three";
 import { clampScale } from "../input/manipulate.js";
@@ -13,6 +14,12 @@ export class Diorama {
   readonly pivot = new Group();
   private readonly inner = new Group();
   private readonly center = DEFAULT_TABLE.center;
+  /** Yaw that faces the placed model toward the viewer; the scientist's turns are added on top. */
+  private baseYaw = 0;
+  private userYaw = 0;
+  /** Layout offset (x, z) from the table centre that sits on the pivot: SpatialFocus moves a feature here. */
+  private focusX = 0;
+  private focusZ = 0;
 
   constructor() {
     this.pivot.name = "diorama";
@@ -21,16 +28,25 @@ export class Diorama {
     this.pivot.add(this.inner);
   }
 
+  /** World point the diorama turns and zooms about: the placed surface point. */
   get pivotPoint(): { x: number; z: number } {
-    return { x: this.center.x, z: this.center.z };
+    return { x: this.pivot.position.x, z: this.pivot.position.z };
+  }
+
+  /** Rest the layout's table centre on `surface`, front turned by `yaw` (ar/stage.ts). Keeps the scientist's turn and zoom. */
+  placeAt(surface: Vec3, yaw: number): void {
+    this.pivot.position.set(surface.x, surface.y, surface.z);
+    this.baseYaw = yaw;
+    this.pivot.rotation.y = this.baseYaw + this.userYaw;
   }
 
   get scale(): number {
     return this.pivot.scale.x;
   }
 
+  /** The scientist's own turn, without the placement yaw. */
   get yaw(): number {
-    return this.pivot.rotation.y;
+    return this.userYaw;
   }
 
   setContent(obj: Object3D | undefined, previous?: Object3D): void {
@@ -38,8 +54,20 @@ export class Diorama {
     if (obj) this.inner.add(obj);
   }
 
+  get focus(): { x: number; z: number } {
+    return { x: this.focusX, z: this.focusZ };
+  }
+
+  /** Slide the content so the layout point `dx, dz` from the table centre rests on the pivot. */
+  setFocus(dx: number, dz: number): void {
+    this.focusX = dx;
+    this.focusZ = dz;
+    this.inner.position.set(-this.center.x - dx, -this.center.y, -this.center.z - dz);
+  }
+
   rotateBy(rad: number): void {
-    this.pivot.rotation.y += rad;
+    this.userYaw += rad;
+    this.pivot.rotation.y = this.baseYaw + this.userYaw;
   }
 
   setScale(s: number): void {
@@ -54,7 +82,9 @@ export class Diorama {
   }
 
   reset(): void {
-    this.pivot.rotation.set(0, 0, 0);
+    this.setFocus(0, 0);
+    this.userYaw = 0;
+    this.pivot.rotation.set(0, this.baseYaw, 0);
     this.pivot.scale.setScalar(1);
   }
 
@@ -66,7 +96,12 @@ export class Diorama {
   }
 
   toWorld(layout: Vec3): Vector3 {
+    return this.toWorldInto(layout, new Vector3());
+  }
+
+  /** Allocation-free toWorld for the render loop. */
+  toWorldInto(layout: Vec3, out: Vector3): Vector3 {
     this.pivot.updateWorldMatrix(true, true);
-    return this.inner.localToWorld(new Vector3(layout.x, layout.y, layout.z));
+    return this.inner.localToWorld(out.set(layout.x, layout.y, layout.z));
   }
 }

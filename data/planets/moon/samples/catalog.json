@@ -1,0 +1,47 @@
+{
+  "credit": "NASA/Astromaterials 3D",
+  "samples": [
+    {
+      "id": "15016-0",
+      "file": "15016-0/15016-0.glb",
+      "sample": "15016,0",
+      "classification": "Low-Ti Olivine Basalt",
+      "collected": "Between Station 2-3, Hadley Rille, Apollo 15"
+    },
+    {
+      "id": "15556-0",
+      "file": "15556-0/15556-0.glb",
+      "sample": "15556,0",
+      "classification": "Low-Ti Basalt",
+      "collected": "The Terrace at Hadley Rille, Station 9A, Apollo 15"
+    },
+    {
+      "id": "10022-53",
+      "file": "10022-53/10022-53.glb",
+      "sample": "10022,53",
+      "classification": "High-Ti, High-K Ilmenite Basalt",
+      "collected": "LM Site, Mare Tranquilitatis, Apollo 11"
+    },
+    {
+      "id": "14321-1404",
+      "file": "14321-1404/14321-1404.glb",
+      "sample": "14321,1404",
+      "classification": "Regolith Breccia",
+      "collected": "Cone Crater, Station C1, Fra Mauro Formation, Apollo 14"
+    },
+    {
+      "id": "67016-2",
+      "file": "67016-2/67016-2.glb",
+      "sample": "67016,2",
+      "classification": "Fragmental Breccia",
+      "collected": "North Ray Crater, Station 11/12, Descartes Highlands, Apollo 16"
+    },
+    {
+      "id": "MIL090036-35",
+      "file": "MIL090036-35/MIL090036-35.glb",
+      "sample": "MIL 090036,35",
+      "classification": "Lunar Anorthositic Breccia",
+      "collected": "ANSMET Field Season 1990, Miller Range, Antarctica"
+    }
+  ]
+}
