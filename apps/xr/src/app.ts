@@ -73,6 +73,8 @@ export interface AppState {
   evidenceOpen?: string;
   orbs: number;
   ar: PlacementStatus & { mode: ExperienceMode; environment: EnvironmentMode; regionMarked: boolean };
+  /** Terrain drawing: surface vertices in use (budget 256²) and whether tiles are still refining. */
+  terrain?: { vertices: number; refining: boolean; lodSides: number[] };
 }
 
 /** Default seated layout (INTERACTION.md §3); ar/stage.ts moves it to wherever the explorer is placed. */
@@ -124,6 +126,7 @@ export class NexusApp {
   private experience: ExperienceMode = "viewer";
   private stage: StagePose = DEFAULT_STAGE;
   private hoverMarker = false;
+  private readonly toWorld = (layout: Vector3, out: Vector3): Vector3 => this.diorama.toWorldInto(layout, out);
   private guidePlaced = false;
   /** Phone touch gestures: a drag or pinch on the overlay must not also count as a tap. */
   private selectGuard?: () => boolean;
@@ -261,6 +264,7 @@ export class NexusApp {
       evidenceOpen: this.evidenceOpen,
       orbs: this.orbs.count,
       ar: { ...this.placement.status(), mode: this.experience, environment: this.env.mode, regionMarked: this.env.regionMark !== undefined },
+      terrain: this.site ? { vertices: this.site.tiles.vertexCount, refining: this.site.tiles.refining, lodSides: this.site.tiles.lodSides() } : undefined,
     };
   }
 
@@ -413,6 +417,7 @@ export class NexusApp {
   async loadSite(siteId: string): Promise<void> {
     const next = await loadSite(siteId);
     this.env.setSite(next.group, this.site?.group);
+    this.site?.tiles.dispose();
     next.group.add(this.orbs.group, this.outline.mesh, this.beam.group);
     this.orbs.clear();
     this.agents.close();
@@ -454,6 +459,7 @@ export class NexusApp {
     if (!site) return;
     const cam = this.world.renderer.xr.isPresenting ? this.world.renderer.xr.getCamera() : this.world.camera;
     cam.getWorldPosition(this.head);
+    site.tiles.update(now, this.head, this.toWorld, this.diorama.scale);
     for (const [id, marker] of site.markers) {
       marker.setHover(id === this.hoverFeature);
       marker.update(now, this.head, this.diorama.scale);
@@ -975,6 +981,8 @@ export class NexusApp {
         lines.push({ text: "Turn your left palm up for the menu: sites, logbook and the push-to-talk mic.", tone: "muted" });
         // AGENTS.md rule 7: archival imagery is never presented as live.
         lines.push({ text: "Terrain and imagery: archival LROC NAC products (NASA/GSFC/Arizona State University), not live data.", tone: "muted" });
+        const h = this.site?.header;
+        if (h) lines.push({ text: `Grid ${h.width} × ${h.height} posts at ${h.cellSizeM} m (${h.sourceEvidenceId}). ${h.coordinateReferenceSystem}.`, tone: "muted" });
         break;
       }
       case "selected":

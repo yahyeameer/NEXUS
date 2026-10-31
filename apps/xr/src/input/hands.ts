@@ -198,7 +198,12 @@ export class HandInput {
     this.raycaster.ray.direction.copy(tmpDir).negate();
     this.raycaster.far = RAY_LENGTH_M;
     const terrain = this.hooks.terrain();
-    const hits = this.raycaster.intersectObjects(terrain ? [...panels.map((p) => p.mesh), terrain] : panels.map((p) => p.mesh), false);
+    const hits = this.raycaster.intersectObjects(panels.map((p) => p.mesh), false);
+    // The terrain is a group of tiles (and the globe a mesh inside its model), so it is searched recursively.
+    if (terrain) {
+      hits.push(...this.raycaster.intersectObject(terrain, true));
+      hits.sort((a, b) => a.distance - b.distance);
+    }
     // Panels draw over the terrain (depthTest off), so a ray takes the panel it visibly crosses even when a corner
     // of the zoomed diorama is physically nearer.
     const first = hits.find((h) => panels.some((p) => p.mesh === h.object)) ?? hits[0];

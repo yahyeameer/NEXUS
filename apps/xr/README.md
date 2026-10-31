@@ -79,6 +79,15 @@ Chrome on an ARCore Android phone. Choose **Enter AR Exploration**. The session 
 `anchors`, `dom-overlay` (phone toolbar), `hand-tracking`, `local-floor` and `plane-detection`; it reads back what was
 granted (`?debug=1` shows it) and works with whatever subset the device gives.
 
+## Terrain detail
+
+Each site's DEM is drawn as 4 × 4 tiles (`src/planet/terrainTileManager.ts`, meshes from `packages/terrain`
+`buildTileMesh`). Every 250 ms the tiles are given a level of detail from 9 to 129 vertices per side by how large they
+look from the eye: all tiles first reach 33, then the nearest refine further while the total stays within the Quest
+budget of 256² surface vertices. One tile changes per frame, skirts hide cracks between levels, and normals come from
+the full DEM so lighting has no seams. Loading is progressive: grey coarse tiles as soon as the DEM arrives, the
+orthophoto when it lands, finer tiles frame by frame. Measurements always read the full-resolution grid.
+
 ## NASA assets
 
 `data/planets/moon/globe/` holds the Moon globe and its `provenance.json` (source URL, SHA-256 of the NASA file, credit,
@@ -88,7 +97,7 @@ Measurements come from the LROC terrain (`data/terrain/README.md`).
 
 ## Tests
 
-- `pnpm test` runs the pure logic: placement stage maths, capability and feature reading, touch gestures, the globe's
+- `pnpm test` runs the pure logic: terrain tiles, skirts and level-of-detail budgeting, placement stage maths, capability and feature reading, touch gestures, the globe's
   lat/lon frame, site locations from evidence, tile↔scene mapping, feature picking, the poke state machine, terrain
   gestures, PCM encoding and finding cards.
 - `pnpm test:e2e` runs Playwright against the full emulator stack. The tests move IWER's emulated hands through its
@@ -103,7 +112,7 @@ Measurements come from the LROC terrain (`data/terrain/README.md`).
 src/main.ts           boot: capabilities → launch screen → AR session or 3D viewer
 src/ar/               capability detection, session manager, surface detection (hit-test), placement reticle,
                       planetary anchor, placement flow, stage (layout ↔ placed pose), phone touch gestures
-src/planet/           NASA Moon globe, site locations from evidence, the globe/region environment
+src/planet/           NASA Moon globe, site locations from evidence, the globe/region environment, terrain tiles with LOD
 src/emulator.ts       IWER device, dev UI, test target resolver
 src/app.ts            screens, selection → research → finding → review, wrist menu, voice wiring
 src/scene/            renderer and lights, terrain model (packages/terrain buildMesh), feature picking, tile↔scene mapping
@@ -140,7 +149,7 @@ from `src/ui/spatial`, and nothing in `src/ui/spatial` touches the DOM outside i
 
 ## Not yet in this client
 
-Grab-and-move of the model by hand (Move re-places it instead); Mars; streamed terrain tiles with level of detail;
+Grab-and-move of the model by hand (Move re-places it instead); Mars (no curated Mars data yet); terrain tiles streamed from a server (tiles are cut in the client from each site's one DEM);
 the immersive mode; the video panel; debate; whisper mode; suggested-question chips;
 spatial (HRTF) voices; audio cues for ring states; the offline precomputed bundle inside the client.
 These follow the later milestones in `docs/TASKS.md`.

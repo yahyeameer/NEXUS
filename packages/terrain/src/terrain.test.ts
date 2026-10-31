@@ -3,6 +3,9 @@ import { measurementRecord } from "@nexus/schemas";
 import type { TerrainFeature } from "@nexus/schemas";
 import {
   buildMesh,
+  buildTileMesh,
+  tileRanges,
+  tileVertexCount,
   craterMetrics,
   crossSectionMetrics,
   measureFeature,
@@ -153,5 +156,63 @@ describe("buildMesh", () => {
   it("keeps the full extent when downsampling", () => {
     const m = buildMesh(syntheticGrid(300, 300, 2, () => 0));
     expect(m.positions[(m.cols - 1) * 3]).toBeCloseTo(598);
+  });
+});
+
+describe("tiled terrain", () => {
+  const g = syntheticGrid(101, 101, 2, (x, z) => x * 0.1 + z * 0.05);
+
+  it("splits posts into tiles that share edges and cover the whole DEM", () => {
+    const tiles = tileRanges(g, 4);
+    expect(tiles).toHaveLength(16);
+    expect(tiles[0]).toEqual({ col0: 0, row0: 0, col1: 25, row1: 25 });
+    expect(tiles[1]?.col0).toBe(tiles[0]?.col1);
+    expect(tiles[15]).toEqual({ col0: 75, row0: 75, col1: 100, row1: 100 });
+  });
+
+  it("matches the full mesh on shared edges whatever the level of detail", () => {
+    const [a, b] = tileRanges(g, 4);
+    if (!a || !b) throw new Error("tiles");
+    const fine = buildTileMesh(g, a, 26, 5);
+    const coarse = buildTileMesh(g, b, 9, 5);
+    // East edge of tile a at its north-east corner equals the west edge of tile b at its north-west corner.
+    const ne = (fine.cols - 1) * 3;
+    expect(fine.positions[ne]).toBeCloseTo(coarse.positions[0] ?? NaN);
+    expect(fine.positions[ne + 1]).toBeCloseTo(coarse.positions[1] ?? NaN);
+    // Same global uv convention as buildMesh: the texture is shared by every tile.
+    expect(coarse.uvs[0]).toBeCloseTo(25 / 100);
+  });
+
+  it("hangs an outward-facing skirt below every edge", () => {
+    const t = tileRanges(g, 2)[0];
+    if (!t) throw new Error("tile");
+    const m = buildTileMesh(g, t, 9, 5);
+    const surface = m.cols * m.rows;
+    const ringLength = 2 * (m.cols - 1) + 2 * (m.rows - 1);
+    expect(m.positions.length / 3).toBe(surface + ringLength);
+    // Skirt vertices sit 5 m under the edge vertex they copy.
+    expect(m.positions[surface * 3 + 1]).toBeCloseTo((m.positions[1] ?? 0) - 5);
+    const cx = ((t.col0 + t.col1) / 2) * 2;
+    const cz = ((t.row0 + t.row1) / 2) * 2;
+    const firstSkirt = (m.cols - 1) * (m.rows - 1) * 6;
+    for (let k = firstSkirt; k < m.indices.length; k += 3) {
+      const v = [0, 1, 2].map((j) => {
+        const i = m.indices[k + j] ?? 0;
+        return { x: m.positions[i * 3] ?? 0, y: m.positions[i * 3 + 1] ?? 0, z: m.positions[i * 3 + 2] ?? 0 };
+      });
+      const [a, b, c] = v as [{ x: number; y: number; z: number }, { x: number; y: number; z: number }, { x: number; y: number; z: number }];
+      const nx = (b.y - a.y) * (c.z - a.z) - (b.z - a.z) * (c.y - a.y);
+      const nz = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+      const mx = (a.x + b.x + c.x) / 3 - cx;
+      const mz = (a.z + b.z + c.z) / 3 - cz;
+      expect(nx * mx + nz * mz).toBeGreaterThan(0);
+    }
+  });
+
+  it("counts surface vertices for the budget, clamped to the posts a tile has", () => {
+    const t = tileRanges(g, 4)[0];
+    if (!t) throw new Error("tile");
+    expect(tileVertexCount(t, 9)).toBe(81);
+    expect(tileVertexCount(t, 129)).toBe(26 * 26);
   });
 });
