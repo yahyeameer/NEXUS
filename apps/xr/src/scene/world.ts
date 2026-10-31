@@ -3,13 +3,23 @@
 import {
   AmbientLight,
   BoxGeometry,
+  BufferAttribute,
+  BufferGeometry,
+  CanvasTexture,
+  CircleGeometry,
   Color,
   DirectionalLight,
-  GridHelper,
+  EdgesGeometry,
+  LineBasicMaterial,
+  LineSegments,
   Mesh,
+  MeshBasicMaterial,
   MeshStandardMaterial,
   PerspectiveCamera,
+  Points,
+  PointsMaterial,
   Scene,
+  SRGBColorSpace,
   WebGLRenderer,
 } from "three";
 import type { Object3D } from "three";
@@ -33,7 +43,7 @@ export function createWorld(container: HTMLElement): World {
   container.append(renderer.domElement);
 
   const scene = new Scene();
-  scene.background = new Color(0x101216);
+  scene.background = new Color(0x060912);
   const camera = new PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 50);
   // Seated eye height; the XR session replaces this pose with the headset's.
   camera.position.set(0, 1.2, 0);
@@ -46,17 +56,58 @@ export function createWorld(container: HTMLElement): World {
   scene.add(sun);
 
   const t = DEFAULT_TABLE;
-  const desk = new Mesh(new BoxGeometry(1.3, 0.04, 0.8), new MeshStandardMaterial({ color: 0x2b2e35, roughness: 0.9 }));
-  desk.position.set(t.center.x, t.center.y - 0.03, t.center.z);
-  const floor = new Mesh(new BoxGeometry(8, 0.01, 8), new MeshStandardMaterial({ color: 0x15171c }));
-  floor.position.y = -0.005;
-  const grid = new GridHelper(8, 16, 0x2a2e36, 0x1f2229);
-  scene.add(desk, floor, grid);
+  // A dark plinth with a lit cyan edge, floating in a field of stars: the terrain is the brightest thing in the room.
+  const plinthGeometry = new BoxGeometry(0.94, 0.04, 0.94);
+  const plinth = new Mesh(plinthGeometry, new MeshStandardMaterial({ color: 0x141b2e, roughness: 0.35, metalness: 0.6 }));
+  plinth.position.set(t.center.x, t.center.y - 0.03, t.center.z);
+  const edge = new LineSegments(new EdgesGeometry(plinthGeometry), new LineBasicMaterial({ color: 0x37d6ff }));
+  edge.position.copy(plinth.position);
+  const floor = new Mesh(new CircleGeometry(6, 64), new MeshBasicMaterial({ map: floorGlow(), transparent: true, depthWrite: false }));
+  floor.rotation.x = -Math.PI / 2;
+  const stars = starField(1400);
+  scene.add(plinth, edge, floor, stars);
 
   window.addEventListener("resize", () => {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
-  return { renderer, scene, camera, room: [desk, floor, grid] };
+  return { renderer, scene, camera, room: [plinth, edge, floor, stars] };
+}
+
+/** A soft blue pool of light on the floor under the plinth, fading to nothing so the floor has no visible edge. */
+function floorGlow(): CanvasTexture {
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const ctx = c.getContext("2d");
+  if (ctx) {
+    const g = ctx.createRadialGradient(128, 128, 0, 128, 128, 128);
+    g.addColorStop(0, "rgba(55, 160, 255, 0.38)");
+    g.addColorStop(0.35, "rgba(40, 80, 170, 0.14)");
+    g.addColorStop(1, "rgba(10, 16, 40, 0)");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 256, 256);
+  }
+  const t = new CanvasTexture(c);
+  t.colorSpace = SRGBColorSpace;
+  return t;
+}
+
+/** Deterministic stars (a fixed LCG), so screenshots and tests do not shimmer between runs. */
+function starField(count: number): Points {
+  const pos = new Float32Array(count * 3);
+  let seed = 7;
+  const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  for (let i = 0; i < count; i++) {
+    const u = rnd() * 2 - 1;
+    const a = rnd() * Math.PI * 2;
+    const r = 18 + rnd() * 6;
+    const q = Math.sqrt(1 - u * u);
+    pos[i * 3] = Math.cos(a) * q * r;
+    pos[i * 3 + 1] = Math.abs(u) * r + 1;
+    pos[i * 3 + 2] = Math.sin(a) * q * r;
+  }
+  const g = new BufferGeometry();
+  g.setAttribute("position", new BufferAttribute(pos, 3));
+  return new Points(g, new PointsMaterial({ color: 0xcfe2ff, size: 0.09, sizeAttenuation: true, transparent: true, opacity: 0.85 }));
 }

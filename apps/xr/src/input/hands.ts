@@ -34,6 +34,9 @@ interface Slot {
   cursor: Mesh;
   pokes: Map<Panel, PokeTracker>;
   rayHeld?: { panel: Panel; id: string };
+  /** The button the ray rests on, for hover feedback. */
+  hover?: { panel: Panel; id: string };
+  model: Object3D;
   /** A pinch that started on the terrain: a tap selects, a drag turns or zooms. */
   grab?: { point: Vector3; start: Vector3; last: Vector3; maxMove: number; dragging: boolean };
   hit: RayHit;
@@ -61,15 +64,16 @@ export class HandInput {
     for (const i of [0, 1]) {
       const ray = renderer.xr.getController(i);
       const hand = renderer.xr.getHand(i);
-      hand.add(factory.createHandModel(hand, "spheres"));
+      const model = factory.createHandModel(hand, "spheres");
+      hand.add(model);
       const line = new Line(new BufferGeometry().setFromPoints([new Vector3(), new Vector3(0, 0, -1)]), new LineBasicMaterial({ color: 0x9fd8ff, transparent: true, opacity: 0.7 }));
       line.scale.z = RAY_LENGTH_M;
       ray.add(line);
-      const cursor = new Mesh(new SphereGeometry(0.006, 12, 8), new MeshBasicMaterial({ color: 0xffffff, depthTest: false }));
+      const cursor = new Mesh(new SphereGeometry(0.007, 12, 8), new MeshBasicMaterial({ color: 0x8fe3ff, depthTest: false }));
       cursor.renderOrder = 3;
       cursor.visible = false;
       parent.add(ray, hand, cursor);
-      const slot: Slot = { ray, hand, line, cursor, pokes: new Map(), hit: { onUi: false } };
+      const slot: Slot = { ray, hand, line, cursor, model, pokes: new Map(), hit: { onUi: false } };
       ray.addEventListener("connected", (e) => {
         slot.handedness = e.data.handedness === "left" ? "left" : "right";
       });
@@ -89,7 +93,16 @@ export class HandInput {
       this.updatePokes(slot, panels);
       this.updateRay(slot, panels);
     }
+    for (const panel of panels) panel.hover(this.slots.find((s) => s.hover?.panel === panel)?.hover?.id);
     this.updateGrabs();
+  }
+
+  private showRays = true;
+
+  /** Desktop mode drives the hand with a mouse, so the hand spheres and the ray lines are only in the way; the cursor stays. */
+  setDesktop(desktop: boolean): void {
+    this.showRays = !desktop;
+    for (const slot of this.slots) slot.model.visible = !desktop;
   }
 
   private updateGrabs(): void {
@@ -163,12 +176,14 @@ export class HandInput {
 
   private updateRay(slot: Slot, panels: Panel[]): void {
     const active = slot.handedness !== undefined && slot.ray.visible;
-    slot.line.visible = active;
+    slot.line.visible = active && this.showRays;
     slot.cursor.visible = false;
     slot.hit = { onUi: false };
+    slot.hover = undefined;
     if (!active) return;
     const hit = this.cast(slot, panels);
     if (!hit) return;
+    if (hit.panel && hit.buttonId) slot.hover = { panel: hit.panel, id: hit.buttonId };
     slot.cursor.visible = true;
     slot.cursor.position.copy(hit.point);
     slot.line.scale.z = Math.max(0.01, hit.distance);

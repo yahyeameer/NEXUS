@@ -69,7 +69,7 @@ export async function loadSite(siteId: string): Promise<LoadedSite> {
   texture.colorSpace = SRGBColorSpace;
   // uv (0,0) is the north-west corner, which is the image's first row.
   texture.flipY = false;
-  const terrain = new Mesh(geometry, new MeshStandardMaterial({ map: texture, roughness: 1, metalness: 0 }));
+  const terrain = new Mesh(geometry, new MeshStandardMaterial({ map: texture, roughness: 1, metalness: 0, emissive: 0x1a2438, emissiveMap: texture }));
   terrain.name = `terrain:${siteId}`;
 
   const group = new Group();

@@ -10,8 +10,22 @@ pnpm install
 pnpm dev:xr        # API (in memory) + orchestrator (precomputed) + voice gateway (simulated speech) + this client
 ```
 
-Open https://localhost:5173 and accept the self-signed certificate. Press **Enter XR**. The IWER panel lets you move the
-head and both hands with mouse and keyboard. Pair with code `1234`, or set `NEXUS_PAIRING_CODE`.
+Open https://localhost:5173 and accept the self-signed certificate. It enters the emulator by itself and the **mouse is
+your right hand**: no gestures needed. Pair with code `1234` (type it on the keyboard), or set `NEXUS_PAIRING_CODE`.
+
+| Mouse and keyboard | Does |
+| --- | --- |
+| Move the mouse | Aims the right hand's ray. Buttons and glowing rings light up under it |
+| Click | A pinch: press a button, pick a feature |
+| Drag on the terrain | Turns it |
+| Wheel | Zooms |
+| `0`–`9`, `Backspace`, `Enter` | Pairing code; Enter also means Start and Investigate |
+| Hold `Space` | Hold to talk (type your words in the Simulated speech box first) |
+| `Q` / `E`, `+` / `-`, `R` | Turn, zoom, reset |
+| `Esc` | Close the evidence window |
+
+These keys press the same buttons a hand would, so nothing is desktop-only. Add `?devui=1` to get IWER's own panel
+for moving the head and both hands directly (the fingertip-poke and palm-up paths), or `?devui=0` for the test setup.
 
 | Do this | Emulator |
 | --- | --- |
@@ -26,7 +40,7 @@ head and both hands with mouse and keyboard. Pair with code `1234`, or set `NEXU
 Query options:
 
 - `?site=ELBOW_CRATER` picks the starting site.
-- `?devui=0` hides the IWER panel, which is what the tests use.
+- `?devui=0` is what the hands-only tests use: no mouse hand, no IWER panel.
 - `?emulator` forces the emulator even when the browser has a WebXR device.
 
 `pnpm dev:xr:client` runs only this client. It needs the services running elsewhere: set `API_URL` and

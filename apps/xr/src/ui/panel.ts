@@ -37,17 +37,18 @@ const MARGIN = 0.014;
 export const BUTTON_H = 0.042;
 const GAP = 0.01;
 const FONT: Record<PanelLine["tone"], { size: number; color: string; weight: string }> = {
-  title: { size: 0.0135, color: "#f4f1ea", weight: "600" },
-  body: { size: 0.0098, color: "#e6e2d8", weight: "400" },
-  muted: { size: 0.0088, color: "#a9a59b", weight: "400" },
-  warn: { size: 0.0095, color: "#f2b35b", weight: "500" },
+  title: { size: 0.0145, color: "#ffffff", weight: "700" },
+  body: { size: 0.0102, color: "#e4ebf5", weight: "400" },
+  muted: { size: 0.009, color: "#97a6bd", weight: "400" },
+  warn: { size: 0.0097, color: "#ffc671", weight: "600" },
 };
-const BUTTON_COLORS: Record<ButtonStyle, { bg: string; fg: string }> = {
-  primary: { bg: "#3d7be0", fg: "#ffffff" },
-  secondary: { bg: "#3a3f48", fg: "#f4f1ea" },
-  chip: { bg: "#2c4a4a", fg: "#e6fffb" },
-  danger: { bg: "#8a3434", fg: "#ffffff" },
-  active: { bg: "#d0662e", fg: "#ffffff" },
+/** Top and bottom of each button's gradient, plus a rim colour that reads as a lit edge. */
+const BUTTON_COLORS: Record<ButtonStyle, { top: string; bottom: string; rim: string; fg: string }> = {
+  primary: { top: "#4aa8ff", bottom: "#2563eb", rim: "#9fd2ff", fg: "#ffffff" },
+  secondary: { top: "#3a4560", bottom: "#262e44", rim: "#566383", fg: "#eef3ff" },
+  chip: { top: "#1f7a82", bottom: "#135a62", rim: "#5fd9e3", fg: "#e9fdff" },
+  danger: { top: "#d4525a", bottom: "#a02a38", rim: "#ff9aa2", fg: "#ffffff" },
+  active: { top: "#ffa24d", bottom: "#e0662a", rim: "#ffd29c", fg: "#ffffff" },
 };
 
 export class Panel {
@@ -59,6 +60,7 @@ export class Panel {
   private content: PanelContent = { lines: [], rows: [] };
   private page = 0;
   private highlighted?: string;
+  private hovered?: string;
 
   constructor(
     readonly name: string,
@@ -73,8 +75,10 @@ export class Panel {
     this.ctx = ctx;
     this.texture = new CanvasTexture(this.canvas);
     this.texture.colorSpace = SRGBColorSpace;
-    this.mesh = new Mesh(new PlaneGeometry(widthM, heightM), new MeshBasicMaterial({ map: this.texture, transparent: true, side: DoubleSide }));
+    this.mesh = new Mesh(new PlaneGeometry(widthM, heightM), new MeshBasicMaterial({ map: this.texture, transparent: true, side: DoubleSide, depthTest: false }));
     this.mesh.name = name;
+    // UI is drawn over the terrain so a zoomed-in diorama never hides a button.
+    this.mesh.renderOrder = 5;
     this.mesh.userData.panel = this;
   }
 
@@ -92,6 +96,13 @@ export class Panel {
   highlight(id: string | undefined): void {
     if (this.highlighted === id) return;
     this.highlighted = id;
+    this.render();
+  }
+
+  /** Lights the button under a ray or the mouse so it is obvious what a pinch or click will press. */
+  hover(id: string | undefined): void {
+    if (this.hovered === id) return;
+    this.hovered = id;
     this.render();
   }
 
@@ -124,8 +135,22 @@ export class Panel {
     const { ctx, canvas } = this;
     const s = PX_PER_M;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "rgba(20, 22, 27, 0.92)";
-    roundRect(ctx, 0, 0, canvas.width, canvas.height, 0.012 * s);
+    // Glass card: deep navy gradient, a lit rim and a cyan-to-violet accent bar along the top edge.
+    const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    bg.addColorStop(0, "rgba(24, 32, 54, 0.95)");
+    bg.addColorStop(1, "rgba(10, 13, 24, 0.95)");
+    ctx.fillStyle = bg;
+    roundRect(ctx, 0, 0, canvas.width, canvas.height, 0.016 * s);
+    ctx.fill();
+    ctx.lineWidth = 0.0016 * s;
+    ctx.strokeStyle = "rgba(120, 190, 255, 0.55)";
+    roundRect(ctx, ctx.lineWidth / 2, ctx.lineWidth / 2, canvas.width - ctx.lineWidth, canvas.height - ctx.lineWidth, 0.016 * s);
+    ctx.stroke();
+    const bar = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    bar.addColorStop(0, "#37d6ff");
+    bar.addColorStop(1, "#9a6bff");
+    ctx.fillStyle = bar;
+    roundRect(ctx, 0.016 * s, 0.0045 * s, canvas.width - 0.032 * s, 0.0032 * s, 0.0016 * s);
     ctx.fill();
 
     // Buttons bottom-up; text fills what is left above them.
@@ -164,10 +189,10 @@ export class Panel {
       let x = MARGIN * s;
       if (l.badge) {
         const bw = ctx.measureText(l.badge).width + 0.008 * s;
-        ctx.fillStyle = "#4d4a73";
+        ctx.fillStyle = "#4b3fa8";
         roundRect(ctx, x, y - 0.001 * s, bw, f.size * 1.25 * s, 0.003 * s);
         ctx.fill();
-        ctx.fillStyle = "#ece9ff";
+        ctx.fillStyle = "#f1eeff";
         ctx.fillText(l.badge, x + 0.004 * s, y);
         x += bw + 0.004 * s;
       }
@@ -177,18 +202,35 @@ export class Panel {
     }
 
     for (const b of this.buttons) {
-      const c = BUTTON_COLORS[this.highlighted === b.id ? "active" : (b.style ?? "secondary")];
-      const bump = this.highlighted === b.id ? 0.025 : 0;
+      const pressed = this.highlighted === b.id;
+      const hot = pressed || this.hovered === b.id;
+      const c = BUTTON_COLORS[pressed ? "active" : (b.style ?? "secondary")];
+      const bump = pressed ? 0.025 : this.hovered === b.id ? 0.012 : 0;
       const px = b.rect.x * s - b.rect.w * s * bump;
       const py = canvas.height - (b.rect.y + b.rect.h) * s - b.rect.h * s * bump;
-      ctx.fillStyle = c.bg;
-      roundRect(ctx, px, py, b.rect.w * s * (1 + 2 * bump), b.rect.h * s * (1 + 2 * bump), 0.008 * s);
+      const bw = b.rect.w * s * (1 + 2 * bump);
+      const bh = b.rect.h * s * (1 + 2 * bump);
+      const fill = ctx.createLinearGradient(0, py, 0, py + bh);
+      fill.addColorStop(0, c.top);
+      fill.addColorStop(1, c.bottom);
+      if (hot) {
+        ctx.shadowColor = c.rim;
+        ctx.shadowBlur = 0.012 * s;
+      }
+      ctx.fillStyle = fill;
+      roundRect(ctx, px, py, bw, bh, 0.01 * s);
       ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.lineWidth = (hot ? 0.0018 : 0.001) * s;
+      ctx.strokeStyle = hot ? "#ffffff" : c.rim;
+      ctx.globalAlpha = hot ? 1 : 0.55;
+      ctx.stroke();
+      ctx.globalAlpha = 1;
       ctx.fillStyle = c.fg;
-      ctx.font = `500 ${Math.round(0.0105 * s)}px system-ui, sans-serif`;
+      ctx.font = `600 ${Math.round(0.0112 * s)}px system-ui, sans-serif`;
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(fit(ctx, b.label, b.rect.w * s - 0.008 * s), px + (b.rect.w * s * (1 + 2 * bump)) / 2, py + (b.rect.h * s * (1 + 2 * bump)) / 2);
+      ctx.fillText(fit(ctx, b.label, b.rect.w * s - 0.008 * s), px + bw / 2, py + bh / 2);
       ctx.textAlign = "left";
     }
     this.texture.needsUpdate = true;

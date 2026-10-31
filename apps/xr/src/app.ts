@@ -29,6 +29,8 @@ type Screen = "pair" | "welcome" | "idle" | "selected" | "researching" | "findin
 
 export interface AppOptions {
   emulated: boolean;
+  /** Mouse-and-keyboard emulator: the wrist menu stays docked, since there is no palm to turn up. */
+  desktop?: boolean;
   /** Emulator only: what the desktop user typed as "speech" for the current push-to-talk. */
   simulatedTranscript?: () => string | undefined;
 }
@@ -109,12 +111,12 @@ export class NexusApp {
   ) {
     const { scene } = world;
     // Main panel to the front right, about 60 cm away, top edge below eye level, turned toward the seated user (INTERACTION.md §3).
-    this.main.mesh.position.set(0.28, 1.02, -0.5);
+    this.main.mesh.position.set(0.38, 1.0, -0.42);
     this.main.mesh.lookAt(0, 1.2, 0);
-    this.captions.mesh.position.set(0.28, 0.76, -0.5);
+    this.captions.mesh.position.set(0.38, 0.7, -0.42);
     this.captions.mesh.lookAt(0, 1.2, 0);
     // Evidence opens to the front left, mirroring the card, so both can be read side by side.
-    this.evidence.mesh.position.set(-0.27, 1.02, -0.5);
+    this.evidence.mesh.position.set(-0.38, 1.04, -0.45);
     this.evidence.mesh.lookAt(0, 1.2, 0);
     this.evidence.mesh.visible = false;
     scene.add(this.main.mesh, this.captions.mesh, this.wrist.mesh, this.evidence.mesh, this.diorama.pivot);
@@ -126,7 +128,8 @@ export class NexusApp {
       terrainSelect: (p) => this.onTerrainSelect(p),
       pivot: () => this.diorama.pivotPoint,
       manipulate: (m) => {
-        if (m.yaw !== undefined) this.diorama.rotateBy(m.yaw);
+        // A mouse drag moves the emulated hand less than a real arm would, so desktop mode turns the terrain faster.
+        if (m.yaw !== undefined) this.diorama.rotateBy(m.yaw * (opts.desktop ? 1.6 : 1));
         if (m.zoom) this.diorama.setScale(zoomedScale(this.diorama.scale, m.zoom.fromM, m.zoom.toM));
       },
     });
@@ -138,9 +141,26 @@ export class NexusApp {
         this.reportPlayback(kind, u);
       },
     });
+    this.input.setDesktop(opts.desktop === true);
     this.render();
     this.renderCaptions();
     this.renderWrist();
+  }
+
+  /** Mouse and keyboard shortcuts press the same buttons a hand would, so nothing is desktop-only. */
+  press(id: string, edge: "press" | "release" = "press"): boolean {
+    for (const panel of [this.main, this.captions, this.wrist, this.evidence]) {
+      if (!panel.mesh.visible || !panel.buttons.some((b) => b.id === id)) continue;
+      this.onButton(panel, id, edge, "ray");
+      return true;
+    }
+    return false;
+  }
+
+  /** Smooth zoom for the mouse wheel; the wrist menu's Zoom buttons take fixed steps. */
+  zoomBy(factor: number): void {
+    this.diorama.setScale(this.diorama.scale * factor);
+    this.changed();
   }
 
   onChange(fn: () => void): () => void {
@@ -206,11 +226,19 @@ export class NexusApp {
       this.ptt.lastSample = now;
       this.samplePointer(now);
     }
-    // Researching rings pulse (INTERACTION.md §4).
+    if (now - this.hoverCheckedAt >= 100) {
+      this.hoverCheckedAt = now;
+      this.hoverFeature = this.featureUnderRay();
+    }
+    // Researching rings pulse (INTERACTION.md §4); idle rings breathe gently and the hovered one swells so it is
+    // clear what a pinch or click will pick.
     if (this.site) {
       for (const [id, ring] of this.site.markers) {
         const pulsing = this.ringState.get(id) === "researching";
-        ring.material.opacity = pulsing ? 0.5 + 0.4 * Math.sin(now / 250) : 0.85;
+        const hovered = id === this.hoverFeature;
+        ring.material.opacity = pulsing ? 0.5 + 0.4 * Math.sin(now / 250) : hovered ? 1 : 0.72 + 0.16 * Math.sin(now / 600 + ring.id);
+        const k = hovered ? 1.35 : 1;
+        ring.scale.set(k, k, k);
       }
     }
   }
@@ -340,6 +368,16 @@ export class NexusApp {
   }
 
   // --- Selection and research ---------------------------------------------------------------------
+
+  private hoverFeature?: string;
+  private hoverCheckedAt = 0;
+
+  private featureUnderRay(): string | undefined {
+    const site = this.site;
+    const point = this.input.rayHit("right").point;
+    if (!site || !point || this.screen === "pair" || this.screen === "welcome") return undefined;
+    return pickFeature(site.features, sceneToTile(site.frame, this.diorama.toLayout(point)), PICK_TOLERANCE_M)?.id;
+  }
 
   private onTerrainSelect(point: Vector3): void {
     const site = this.site;
@@ -819,7 +857,7 @@ export class NexusApp {
     }
     const cam = this.world.renderer.xr.isPresenting ? this.world.renderer.xr.getCamera() : this.world.camera;
     cam.getWorldPosition(this.head);
-    if (this.input.leftWrist(this.wristPose)) {
+    if (!this.opts.desktop && this.input.leftWrist(this.wristPose)) {
       const toHead = this.head.clone().sub(this.wristPose.position).normalize();
       const facing = Math.max(this.wristPose.palmNormal.dot(toHead), this.wristPose.palmNormal.y);
       const wasVisible = mesh.visible;
@@ -836,9 +874,9 @@ export class NexusApp {
         this.wristFacingSet = true;
       }
     } else {
-      // Controllers only: park the menu to the far left, clear of the evidence window.
+      // Controllers and desktop mode: park the menu to the far left, clear of the evidence window.
       mesh.visible = true;
-      mesh.position.set(-0.5, 0.95, -0.38);
+      mesh.position.set(-0.36, 0.86, -0.3);
       mesh.lookAt(this.head);
     }
   }
