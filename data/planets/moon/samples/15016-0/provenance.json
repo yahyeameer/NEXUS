@@ -1,0 +1,62 @@
+{
+  "assetFile": "15016-0.glb",
+  "sample": "15016,0",
+  "classification": "Low-Ti Olivine Basalt",
+  "origin": "Moon",
+  "collected": "Between Station 2-3, Hadley Rille, Apollo 15",
+  "collection": "Apollo 15",
+  "source": {
+    "organization": "NASA Astromaterials 3D (ARES Acquisition & Curation Office, Johnson Space Center)",
+    "pageUrl": "https://ares.jsc.nasa.gov/astromaterials3d/sample-details.htm?sample=15016-0",
+    "file": "15016-0_SFM_Web-Resolution-Model_Coordinate-Registered.zip",
+    "fileUrl": "https://ares-a3d.s3.us-gov-east-1.amazonaws.com/samples/15016-0/2b_15016-0_SFM_Web-Resolution-Model_Coordinate-Registered/15016-0_SFM_Web-Resolution-Model_Coordinate-Registered.zip",
+    "bytes": 9303546,
+    "sha256": "36abdd3044cb3438217eedb6fb9d51da320419708e94ca0698ffd2c80dfa2f12",
+    "downloadedAt": "2026-10-31",
+    "sourceModel": "Web-resolution photogrammetry (SfM) model, coordinate-registered, 200,000 faces",
+    "modelParameters": {
+      "photographyCaptured": "2018:05:01",
+      "camera": "Hasselblad H4D-60; Lens: HC 120 II; Mega Pixels: 60; Photos: 240; Total Size: 80.5 GB",
+      "scale": "Units: Meters; Targets: 95; Bars: 2162; Total Error: .000077 meters",
+      "acknowledgment": "These 3D reconstructed image data were produced at the Lunar Sample Laboratory Facility for Astromaterials 3D in NASA’s Acquisition & Curation Office and were funded by NASA Planetary Data Archiving, Restoration, and Tools Program, Proposal No.: 15-PDART15_2-0041."
+    },
+    "alsoListedAt": {
+      "url": "https://sketchfab.com/3d-models/73c4fa8c048e46638f9f19d5b2785624",
+      "account": "Astromaterials3D",
+      "license": "CC0 Public Domain",
+      "note": "Same NASA model. Sketchfab downloads need a signed-in account, so the file was taken from NASA's bucket."
+    }
+  },
+  "credit": "NASA/Astromaterials 3D",
+  "license": "CC0 Public Domain (Sketchfab listing). NASA media are generally not copyrighted in the United States; keep the credit and follow NASA's media usage guidelines.",
+  "derivation": {
+    "script": "scripts/data/build_lunar_samples.py",
+    "change": "OBJ to glTF (obj2gltf 3), vertices welded and simplified to about 30,000 triangles with meshoptimizer (@gltf-transform/cli 4, error 0.01), colour map resized to 2048 x 2048 and stored as JPEG quality 88. Units (metres) and NASA's coordinate registration are unchanged.",
+    "bytes": 1520392,
+    "sha256": "96df23368503b8bba6dc283dda2e1deea98211a84c8a2e52cc1c4e43b324bc55",
+    "triangles": 30000,
+    "vertices": 21737,
+    "boundingBoxM": {
+      "min": [
+        -0.030489,
+        -0.036143,
+        -0.041044
+      ],
+      "max": [
+        0.03021,
+        0.035334,
+        0.040944
+      ]
+    },
+    "extentCm": [
+      6.1,
+      7.1,
+      8.2
+    ],
+    "textureSize": [
+      2048,
+      2048
+    ]
+  },
+  "use": "A laboratory specimen returned to Earth, shown at its true size. It is reference material: the app never derives measurements of lunar terrain from it, and it is not evidence about a site unless an evidence pack cites it."
+}

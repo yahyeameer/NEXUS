@@ -45,3 +45,10 @@ directory run `python3 <repo>/scripts/data/build_data.py <repo>/data` (needs num
 `data/planets/<body>/` holds whole-body models for the AR globe view, each with a `provenance.json`. The Moon globe
 (`data/planets/moon/globe/`) is derived from NASA SVS 14959 by `scripts/data/build_moon_globe.py`; see its provenance
 file for the source, checksum, credit and what the source does not state.
+
+`data/planets/moon/samples/` holds six real lunar specimens scanned by NASA Astromaterials 3D (photogrammetry, in
+metres): Apollo 15 basalts 15016 and 15556 from Hadley Rille, Apollo 11 basalt 10022, breccias 14321 and 67016, and
+lunar meteorite MIL 090036. `scripts/data/build_lunar_samples.py` downloads NASA's web-resolution models, takes
+every number from NASA's files or the output, and writes Quest-sized GLBs (about 30,000 triangles, 2048² colour maps) with a `provenance.json` each
+and a `catalog.json`. They are laboratory reference specimens at true size, not evidence about a site unless an
+evidence pack cites them. The same models are listed on Sketchfab by Astromaterials3D under CC0.

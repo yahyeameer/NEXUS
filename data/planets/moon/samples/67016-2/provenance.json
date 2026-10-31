@@ -1,0 +1,62 @@
+{
+  "assetFile": "67016-2.glb",
+  "sample": "67016,2",
+  "classification": "Fragmental Breccia",
+  "origin": "Moon",
+  "collected": "North Ray Crater, Station 11/12, Descartes Highlands, Apollo 16",
+  "collection": "Apollo 16",
+  "source": {
+    "organization": "NASA Astromaterials 3D (ARES Acquisition & Curation Office, Johnson Space Center)",
+    "pageUrl": "https://ares.jsc.nasa.gov/astromaterials3d/sample-details.htm?sample=67016-2",
+    "file": "67016-2_SFM_Web-Resolution-Model_Coordinate-Registered.zip",
+    "fileUrl": "https://ares-a3d.s3.us-gov-east-1.amazonaws.com/samples/67016-2/2b_67016-2_SFM_Web-Resolution-Model_Coordinate-Registered/67016-2_SFM_Web-Resolution-Model_Coordinate-Registered.zip",
+    "bytes": 6281820,
+    "sha256": "14f15542914a1f38be46d6d12fe2ab6253a09259b745ec5b618c02861c87b10c",
+    "downloadedAt": "2026-10-31",
+    "sourceModel": "Web-resolution photogrammetry (SfM) model, coordinate-registered, 100,000 faces",
+    "modelParameters": {
+      "photographyCaptured": "2017:11.30:10",
+      "camera": "Hasselblad H4D-60; Lens: HC 120 II; Mega Pixels: 60; Photos: 240; Total Size: 80.5 GB",
+      "scale": "Units: Meters; Targets: 121; Bars: 3602; Total Error: .000371 meters",
+      "acknowledgment": "These 3D reconstructed image data were produced at the Lunar Sample Laboratory Facility for Astromaterials 3D in NASA’s Acquisition & Curation Office and were funded by NASA Planetary Data Archiving, Restoration, and Tools Program, Proposal No.: 15-PDART15_2-0041."
+    },
+    "alsoListedAt": {
+      "url": "https://sketchfab.com/3d-models/c13f6dde7b0b459ab182327cf47f58c3",
+      "account": "Astromaterials3D",
+      "license": "CC0 Public Domain",
+      "note": "Same NASA model. Sketchfab downloads need a signed-in account, so the file was taken from NASA's bucket."
+    }
+  },
+  "credit": "NASA/Astromaterials 3D",
+  "license": "CC0 Public Domain (Sketchfab listing). NASA media are generally not copyrighted in the United States; keep the credit and follow NASA's media usage guidelines.",
+  "derivation": {
+    "script": "scripts/data/build_lunar_samples.py",
+    "change": "OBJ to glTF (obj2gltf 3), vertices welded and simplified to about 30,000 triangles with meshoptimizer (@gltf-transform/cli 4, error 0.01), colour map resized to 2048 x 2048 and stored as JPEG quality 88. Units (metres) and NASA's coordinate registration are unchanged.",
+    "bytes": 1340672,
+    "sha256": "fc395f4c2515c138726d0d2e6c937cfa6fc9fe724b395298b7a9f6c2f83b678b",
+    "triangles": 30000,
+    "vertices": 16028,
+    "boundingBoxM": {
+      "min": [
+        -0.032252,
+        -0.03041,
+        -0.044159
+      ],
+      "max": [
+        0.03335,
+        0.029453,
+        0.044287
+      ]
+    },
+    "extentCm": [
+      6.6,
+      6.0,
+      8.8
+    ],
+    "textureSize": [
+      2048,
+      2048
+    ]
+  },
+  "use": "A laboratory specimen returned to Earth, shown at its true size. It is reference material: the app never derives measurements of lunar terrain from it, and it is not evidence about a site unless an evidence pack cites it."
+}
