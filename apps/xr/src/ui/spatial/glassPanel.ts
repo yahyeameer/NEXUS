@@ -5,6 +5,7 @@ import { CanvasTexture, DoubleSide, Mesh, MeshBasicMaterial, PlaneGeometry, SRGB
 import type { Object3D } from "three";
 import type { Rect } from "../../input/poke.js";
 import { wrapText } from "../textLayout.js";
+import { HoloFrame } from "./holoFrame.js";
 import { BADGE, BUTTON, COLOR, FONT_FAMILY, MOTION, SPACE, TYPE } from "./tokens.js";
 import type { BadgeTone, ButtonTone, TextTone } from "./tokens.js";
 
@@ -54,6 +55,8 @@ type Glide = { from: Vector3; to: Vector3; face: Vector3; start: number };
 
 export class SpatialGlassPanel {
   readonly mesh: Mesh<PlaneGeometry, MeshBasicMaterial>;
+  /** Animated holographic edge: rim sweep, corner brackets, glow (holoFrame.ts). */
+  readonly frame: HoloFrame;
   buttons: PanelButton[] = [];
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
@@ -72,6 +75,8 @@ export class SpatialGlassPanel {
     readonly heightM: number,
     /** Display-only panels (no buttons) show their first page and never grow paging buttons. */
     private readonly paging = true,
+    /** Room kept free at the left of the text for a live element drawn over the panel (the voice orb). */
+    private readonly insetLeftM = 0,
   ) {
     this.canvas = document.createElement("canvas");
     this.canvas.width = Math.round(widthM * PX_PER_M);
@@ -86,6 +91,8 @@ export class SpatialGlassPanel {
     // UI is drawn over the terrain so a zoomed-in diorama never hides a button.
     this.mesh.renderOrder = 5;
     this.mesh.userData.panel = this;
+    this.frame = new HoloFrame(widthM, heightM, SPACE.radius);
+    this.mesh.add(this.frame.mesh);
   }
 
   get object(): Object3D {
@@ -168,9 +175,12 @@ export class SpatialGlassPanel {
     }
   }
 
+  /** Hologram unfold: the panel opens from a thin horizontal slit while its rim draws on. */
   private applyFade(k: number): void {
     this.mesh.material.opacity = k;
-    this.mesh.scale.setScalar(0.94 + 0.06 * k);
+    this.mesh.scale.set(0.96 + 0.04 * k, 0.18 + 0.82 * k, 1);
+    this.frame.setOpacity(k);
+    this.frame.setReveal(this.closing ? 1 : k);
   }
 
   set(content: PanelContent): void {
@@ -229,6 +239,19 @@ export class SpatialGlassPanel {
     ctx.fillStyle = bg;
     roundRect(ctx, 0, 0, canvas.width, canvas.height, SPACE.radius * s);
     ctx.fill();
+    // A fine dot grid and a soft sheen across the top: reads as engineered glass, costs nothing per frame (canvas
+    // redraws only when content changes).
+    ctx.save();
+    ctx.clip();
+    ctx.fillStyle = COLOR.grid;
+    const step = 0.008 * s;
+    for (let gy = step; gy < canvas.height; gy += step) for (let gx = step; gx < canvas.width; gx += step) ctx.fillRect(gx, gy, 0.0006 * s, 0.0006 * s);
+    const sheen = ctx.createLinearGradient(0, 0, 0, canvas.height * 0.35);
+    sheen.addColorStop(0, COLOR.sheen);
+    sheen.addColorStop(1, "rgba(255, 255, 255, 0)");
+    ctx.fillStyle = sheen;
+    ctx.fillRect(0, 0, canvas.width, canvas.height * 0.35);
+    ctx.restore();
     ctx.lineWidth = 0.0014 * s;
     ctx.strokeStyle = COLOR.glassRim;
     roundRect(ctx, ctx.lineWidth / 2, ctx.lineWidth / 2, canvas.width - ctx.lineWidth, canvas.height - ctx.lineWidth, SPACE.radius * s);
@@ -243,7 +266,9 @@ export class SpatialGlassPanel {
     // Buttons bottom-up; text fills what is left above them.
     const rows = [...this.content.rows];
     const textLines = this.layoutText();
-    const textBottom = (MARGIN + (rows.length + 1) * (BUTTON_H + GAP)) * s;
+    // Room for the button rows plus one for paging; a display-only panel with no buttons gives it all to text.
+    const reserved = rows.length + (this.paging ? 1 : 0);
+    const textBottom = (MARGIN + reserved * (BUTTON_H + GAP)) * s;
     const img = this.content.image;
     const imgH = img ? Math.min((this.widthM - 2 * MARGIN) / img.aspect, this.heightM * 0.42) * s : 0;
     const pages = paginate(textLines, canvas.height - textBottom - MARGIN * s - imgH);
@@ -273,7 +298,7 @@ export class SpatialGlassPanel {
       const f = FONT[l.tone];
       ctx.font = font(l.tone);
       ctx.textBaseline = "top";
-      let x = MARGIN * s;
+      let x = (MARGIN + this.insetLeftM) * s;
       if (l.badge) {
         const bw = ctx.measureText(l.badge).width + 0.008 * s;
         const tone = BADGE[l.badgeTone ?? "default"];
@@ -312,6 +337,13 @@ export class SpatialGlassPanel {
       ctx.fillStyle = fill;
       roundRect(ctx, px, py, bw, bh, SPACE.buttonRadius * s);
       ctx.fill();
+      // Glass bevel: a bright hairline along the top edge.
+      const bevel = ctx.createLinearGradient(px, 0, px + bw, 0);
+      bevel.addColorStop(0, "rgba(255, 255, 255, 0)");
+      bevel.addColorStop(0.5, hot ? "rgba(255, 255, 255, 0.7)" : "rgba(255, 255, 255, 0.28)");
+      bevel.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = bevel;
+      ctx.fillRect(px + SPACE.buttonRadius * s, py + 0.0006 * s, bw - 2 * SPACE.buttonRadius * s, 0.0008 * s);
       ctx.lineWidth = (hot ? 0.0018 : 0.001) * s;
       ctx.strokeStyle = hot ? "#ffffff" : c.rim;
       ctx.globalAlpha = hot ? 1 : 0.55;
@@ -335,7 +367,7 @@ export class SpatialGlassPanel {
     for (const l of this.content.lines) {
       ctx.font = font(l.tone);
       const badgeW = l.badge ? ctx.measureText(l.badge).width + 0.012 * s : 0;
-      const wrapped = wrapText(l.text, (this.widthM - 2 * MARGIN) * s - badgeW, (t) => ctx.measureText(t).width);
+      const wrapped = wrapText(l.text, (this.widthM - 2 * MARGIN - this.insetLeftM) * s - badgeW, (t) => ctx.measureText(t).width);
       wrapped.forEach((t, i) => out.push({ text: t, tone: l.tone, badge: i === 0 ? l.badge : undefined, badgeTone: l.badgeTone, gapAfter: i === wrapped.length - 1 }));
     }
     return out;

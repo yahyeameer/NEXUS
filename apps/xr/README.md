@@ -39,7 +39,7 @@ right hand**: no gestures needed. Pair with code `1234` (type it on the keyboard
 | Drag on the model | Turns it |
 | Wheel | Zooms |
 | `0`–`9`, `Backspace`, `Enter` | Pairing code; Enter also means Start and Investigate |
-| Hold `Space` | Hold to talk (type your words in the Simulated speech box first) |
+| Hold `Space` | Hold to talk (type your words in the Simulated speech box first). The voice window at the top left shows listening, with your mic level, and who is speaking |
 | `Q` / `E`, `+` / `-`, `R` | Turn, zoom, reset |
 | `Esc` | Close the evidence window |
 
@@ -135,11 +135,13 @@ from `src/ui/spatial`, and nothing in `src/ui/spatial` touches the DOM outside i
 ## NEXUS Spatial UI design system
 
 World-space UI built directly on three.js, the client's existing renderer. `src/ui/spatial/tokens.ts` holds the
-colours (dark translucent glass, one restrained cyan accent, amber only for "needs you"), type scale and motion.
+colours (dark translucent glass, holographic cyan-to-violet accents, amber only for "needs you"), type scale and motion.
 
 | Component | What it is |
 | --- | --- |
 | `SpatialGlassPanel` | Base panel: canvas-drawn glass card with poke/ray buttons ≥ 4 cm, open/close fades and glides. A panel only reports button targets once it has settled, so a fingertip never chases a moving button |
+| `HoloFrame` | Animated edge on every panel: a light sweeping round the rim, HUD corner brackets, a soft glow and a scan band. On open the panel unfolds from a slit while its rim draws on. One additive shader quad per panel and a shared clock, so no per-frame allocations |
+| `VoicePanel` | The voice window (captions strip). A live orb shows the voice state: breathing when idle, rippling with your real mic level while push-to-talk is held, violet radial bars while an agent speaks. Captions stay the words; the orb only shows state |
 | `ScientificFindingPanel` | The main card. Rises out of the selected feature, glides to its comfortable dock and stays tethered to the feature. Its lines come from `cardModel` in `src/ui/findingView.ts` |
 | Claim badges | Observation (slate), measurement (cyan), interpretation (violet) and hypothesis (amber), always labelled in words too. An interpretation or hypothesis finding carries a line saying it is not an established result (`BADGE` in `tokens.ts`) |
 | `UncertaintyIndicator` | A three-step meter badge (●○○ / ●●○ / ●●●) next to the level and explanation, neutral, amber or red (`uncertaintyBadge`) |

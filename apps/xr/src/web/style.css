@@ -1,5 +1,6 @@
-/* NEXUS web layer: the launch screen, the phone/3D-viewer toolbar and desktop helpers. Graphite and near-black
-   surfaces, one restrained cyan accent, subtle glass. Spatial (in-headset) UI is styled in src/ui/spatial/tokens.ts. */
+/* NEXUS web layer: the launch screen, the phone/3D-viewer toolbar and desktop helpers. Near-black surfaces, holographic
+   cyan-to-violet accents, glass with animated light. Spatial (in-headset) UI is styled in src/ui/spatial/tokens.ts.
+   Every animation stops under prefers-reduced-motion. */
 :root {
   color-scheme: dark;
   --bg: #0b0d10;
@@ -11,6 +12,8 @@
   --muted: #8d97a3;
   --accent: #4fd8ff;
   --accent-deep: #1593b8;
+  --violet: #8b7bff;
+  --holo: linear-gradient(110deg, #3fd0ff 0%, #8b7bff 50%, #3fd0ff 100%);
   --warn: #ffc56b;
   --font: Inter, "Segoe UI", "SF Pro Text", system-ui, sans-serif;
 }
@@ -46,48 +49,135 @@ button {
   touch-action: none;
 }
 
-/* Launch screen */
+/* Launch screen: an orbit of light round the title, a slow star drift and a scan line, all CSS. */
 .launch {
   position: absolute;
   inset: 0;
   display: grid;
   place-items: center;
   padding: 24px;
-  background: radial-gradient(110% 80% at 50% 30%, #181e26 0%, #080a0d 72%);
+  overflow: hidden;
+  background: radial-gradient(110% 80% at 50% 30%, #141c28 0%, #06080b 72%);
+}
+.launch::before {
+  /* Star field: two layers of tiny dots drifting at different speeds. */
+  content: "";
+  position: absolute;
+  inset: -50%;
+  background-image:
+    radial-gradient(1px 1px at 20% 30%, rgba(200, 235, 255, 0.7), transparent 60%),
+    radial-gradient(1px 1px at 70% 80%, rgba(200, 235, 255, 0.5), transparent 60%),
+    radial-gradient(1.5px 1.5px at 40% 60%, rgba(160, 150, 255, 0.6), transparent 60%),
+    radial-gradient(1px 1px at 85% 15%, rgba(200, 235, 255, 0.6), transparent 60%),
+    radial-gradient(1px 1px at 10% 85%, rgba(200, 235, 255, 0.4), transparent 60%);
+  background-size: 340px 340px, 260px 260px, 420px 420px, 300px 300px, 380px 380px;
+  animation: drift 90s linear infinite;
+  opacity: 0.7;
+}
+.launch::after {
+  /* A scan line sweeping down the screen. */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 140px;
+  top: -140px;
+  background: linear-gradient(180deg, transparent, rgba(79, 216, 255, 0.06), transparent);
+  animation: scan 7s ease-in-out infinite;
+  pointer-events: none;
 }
 .launch[hidden] {
   display: none;
 }
 .launch-inner {
-  width: min(520px, 100%);
+  position: relative;
+  z-index: 1;
+  width: min(560px, 100%);
   text-align: center;
+  animation: rise 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.launch-orbit {
+  position: absolute;
+  left: 50%;
+  top: 46px;
+  width: 520px;
+  height: 520px;
+  margin-left: -260px;
+  margin-top: -230px;
+  pointer-events: none;
+  z-index: -1;
+}
+.launch-orbit i {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 1px solid rgba(79, 216, 255, 0.16);
+  transform: rotateX(72deg) rotateZ(0deg);
+  animation: orbit 18s linear infinite;
+}
+.launch-orbit i:nth-child(2) {
+  inset: 60px;
+  border-color: rgba(139, 123, 255, 0.2);
+  animation-duration: 12s;
+  animation-direction: reverse;
+}
+.launch-orbit i:nth-child(3) {
+  inset: 130px;
+  border-color: rgba(79, 216, 255, 0.24);
+  animation-duration: 8s;
+}
+.launch-orbit i::after {
+  /* A satellite of light riding each ring. */
+  content: "";
+  position: absolute;
+  top: -3px;
+  left: 50%;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #bff4ff;
+  box-shadow: 0 0 12px 3px rgba(79, 216, 255, 0.8);
+}
+.launch-orbit b {
+  position: absolute;
+  inset: 190px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(79, 216, 255, 0.22), rgba(139, 123, 255, 0.08) 45%, transparent 70%);
+  filter: blur(6px);
+  animation: breathe 5s ease-in-out infinite;
 }
 .launch h1 {
   margin: 0;
-  font-size: clamp(44px, 9vw, 72px);
-  font-weight: 600;
+  font-size: clamp(44px, 9vw, 76px);
+  font-weight: 650;
   letter-spacing: 0.32em;
   padding-left: 0.32em;
-  color: var(--fg);
+  background: linear-gradient(100deg, #eef6ff 0%, #eef6ff 38%, #7fe6ff 48%, #b9adff 54%, #eef6ff 64%, #eef6ff 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: 0 0 40px rgba(79, 216, 255, 0.25);
+  animation: shimmer 6s ease-in-out infinite;
 }
 .launch-sub {
-  margin: 10px 0 36px;
+  margin: 12px 0 38px;
   font-size: 13px;
   font-weight: 500;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.28em;
   text-transform: uppercase;
   color: var(--accent);
-  opacity: 0.85;
+  opacity: 0.9;
 }
 .launch-actions {
   display: grid;
   gap: 12px;
-  max-width: 320px;
+  max-width: 340px;
   margin: 0 auto;
 }
 .launch-note {
   margin: 22px auto 0;
-  max-width: 420px;
+  max-width: 440px;
   font-size: 13px;
   line-height: 1.5;
   color: var(--muted);
@@ -124,12 +214,26 @@ button {
   outline-offset: 2px;
 }
 .btn-primary {
+  position: relative;
+  overflow: hidden;
   background: linear-gradient(180deg, #1aa9cf, var(--accent-deep));
-  border-color: rgba(142, 234, 255, 0.5);
+  border-color: rgba(142, 234, 255, 0.6);
   color: #fff;
+  letter-spacing: 0.02em;
+  box-shadow: 0 0 0 1px rgba(79, 216, 255, 0.15), 0 8px 30px -8px rgba(79, 216, 255, 0.6);
+}
+.btn-primary:not(:disabled)::after {
+  /* A light sheen crossing the button every few seconds. */
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-120%);
+  animation: sheen 3.6s ease-in-out infinite;
 }
 .btn-primary:not(:disabled):hover {
   background: linear-gradient(180deg, #23b9e0, #1a9fc4);
+  box-shadow: 0 0 0 1px rgba(79, 216, 255, 0.35), 0 10px 40px -6px rgba(79, 216, 255, 0.8);
 }
 .btn-secondary {
   background: rgba(255, 255, 255, 0.04);
@@ -137,7 +241,8 @@ button {
   color: var(--fg);
 }
 .btn-secondary:not(:disabled):hover {
-  border-color: var(--rim);
+  border-color: rgba(139, 123, 255, 0.5);
+  box-shadow: 0 0 24px -6px rgba(139, 123, 255, 0.55);
 }
 .btn-glass {
   min-height: 44px;
@@ -148,7 +253,8 @@ button {
   backdrop-filter: blur(10px);
 }
 .btn-glass:hover {
-  border-color: rgba(120, 214, 235, 0.45);
+  border-color: rgba(120, 214, 235, 0.55);
+  box-shadow: 0 0 22px -6px rgba(79, 216, 255, 0.6);
 }
 
 /* Toolbar and session status, bottom centre and top centre: small, out of the model's way. */
@@ -163,6 +269,18 @@ button {
 .toolbar[hidden],
 .toolbar [hidden] {
   display: none;
+}
+.session-chip::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+  vertical-align: 1px;
+  animation: blink 2.4s ease-in-out infinite;
 }
 .session-chip {
   position: absolute;
@@ -220,20 +338,113 @@ button {
 }
 
 /* Desktop helpers (3D viewer and emulator) */
+/* The desktop voice window: an orb and level bars that mirror the headset's voice panel. */
 .sim-speech {
+  --level: 0;
+  --tint: var(--accent);
+  /* Top left: the one corner the 3D view's panels and the wrist menu never use. */
   position: fixed;
-  right: 12px;
-  bottom: 12px;
+  left: 14px;
+  top: 14px;
   z-index: 2000;
   display: grid;
-  gap: 4px;
-  width: min(300px, calc(100vw - 24px));
-  padding: 10px 12px;
-  border-radius: 12px;
-  border: 1px solid var(--rim);
-  background: var(--glass);
-  backdrop-filter: blur(10px);
+  gap: 6px;
+  width: min(320px, calc(100vw - 28px));
+  padding: 12px 14px 12px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--glass-strong), var(--glass-strong)) padding-box,
+    linear-gradient(120deg, rgba(79, 216, 255, 0.55), rgba(139, 123, 255, 0.35), rgba(79, 216, 255, 0.15)) border-box;
+  backdrop-filter: blur(14px);
+  box-shadow: 0 18px 50px -20px rgba(0, 0, 0, 0.8), 0 0 30px -12px rgba(79, 216, 255, 0.35);
   font-size: 12px;
+  transition: box-shadow 240ms ease;
+}
+.sim-speech[data-mode="listening"] {
+  box-shadow: 0 18px 50px -20px rgba(0, 0, 0, 0.8), 0 0 46px -8px rgba(79, 216, 255, 0.75);
+}
+.sim-speech[data-mode="speaking"] {
+  --tint: var(--violet);
+  box-shadow: 0 18px 50px -20px rgba(0, 0, 0, 0.8), 0 0 46px -8px rgba(139, 123, 255, 0.7);
+}
+.voice-head {
+  display: grid;
+  grid-template-columns: 44px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.voice-orb {
+  position: relative;
+  width: 44px;
+  height: 44px;
+}
+.voice-orb b {
+  position: absolute;
+  inset: 13px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #ffffff, var(--tint) 55%, transparent 75%);
+  box-shadow: 0 0 calc(10px + var(--level) * 24px) calc(2px + var(--level) * 6px) var(--tint);
+  transform: scale(calc(0.9 + var(--level) * 0.45));
+  transition: transform 80ms linear;
+  animation: breathe 3.2s ease-in-out infinite;
+}
+.voice-orb i {
+  position: absolute;
+  inset: 4px;
+  border-radius: 50%;
+  border: 1px solid var(--tint);
+  opacity: 0.35;
+}
+.sim-speech[data-mode="listening"] .voice-orb i,
+.sim-speech[data-mode="speaking"] .voice-orb i {
+  animation: ripple 1.6s ease-out infinite;
+}
+.voice-orb i:nth-child(2) {
+  animation-delay: 0.53s !important;
+}
+.voice-orb i:nth-child(3) {
+  animation-delay: 1.06s !important;
+}
+.voice-title {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--tint);
+}
+.voice-state {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--fg);
+}
+.voice-bars {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 28px;
+}
+.voice-bars span {
+  width: 3px;
+  height: 100%;
+  border-radius: 2px;
+  background: linear-gradient(180deg, #ffffff, var(--tint));
+  opacity: 0.85;
+  transform: scaleY(0.12);
+  transition: transform 90ms linear;
+}
+.sim-speech[data-mode="listening"] .voice-bars span {
+  transform: scaleY(calc(0.14 + min(1, var(--level) * 2.2) * var(--k)));
+}
+.sim-speech[data-mode="speaking"] .voice-bars span {
+  animation: talk 0.9s ease-in-out infinite;
+  animation-delay: var(--d);
+}
+.sim-speech label {
+  margin-top: 2px;
 }
 .sim-speech span,
 .sim-speech small {
@@ -241,13 +452,20 @@ button {
 }
 .sim-speech input {
   font: inherit;
-  padding: 6px 8px;
-  border-radius: 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(0, 0, 0, 0.35);
   color: var(--fg);
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+.sim-speech input:focus {
+  outline: none;
+  border-color: rgba(79, 216, 255, 0.6);
+  box-shadow: 0 0 0 3px rgba(79, 216, 255, 0.15);
 }
 .controls {
+  box-shadow: 0 0 26px -12px rgba(79, 216, 255, 0.5);
   position: fixed;
   right: 12px;
   top: 12px;
@@ -278,4 +496,97 @@ button {
 .controls dd {
   margin: 0;
   color: var(--muted);
+}
+
+/* Motion */
+@keyframes drift {
+  to {
+    transform: translate(170px, 120px);
+  }
+}
+@keyframes scan {
+  0%,
+  10% {
+    transform: translateY(0);
+  }
+  90%,
+  100% {
+    transform: translateY(calc(100vh + 280px));
+  }
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px) scale(0.98);
+    filter: blur(4px);
+  }
+}
+@keyframes orbit {
+  to {
+    transform: rotateX(72deg) rotateZ(360deg);
+  }
+}
+@keyframes breathe {
+  0%,
+  100% {
+    opacity: 0.75;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+@keyframes shimmer {
+  0%,
+  100% {
+    background-position: 100% 0;
+  }
+  50% {
+    background-position: 0% 0;
+  }
+}
+@keyframes sheen {
+  0%,
+  55% {
+    transform: translateX(-120%);
+  }
+  85%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+@keyframes blink {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+@keyframes ripple {
+  from {
+    transform: scale(0.55);
+    opacity: 0.8;
+  }
+  to {
+    transform: scale(1.25);
+    opacity: 0;
+  }
+}
+@keyframes talk {
+  0%,
+  100% {
+    transform: scaleY(calc(0.15 + 0.2 * var(--k)));
+  }
+  50% {
+    transform: scaleY(calc(0.3 + 0.7 * var(--k)));
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
 }

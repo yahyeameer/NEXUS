@@ -1,5 +1,5 @@
 // NEXUS Spatial UI tokens: one place for colour, type and motion so every panel and scene element reads as one
-// system. Dark translucent surfaces, a single restrained cyan accent, warm amber only for "needs you" states.
+// system. Dark translucent surfaces, holographic cyan-to-violet accents (HOLO), warm amber only for "needs you" states.
 // Sizes are in metres (world space); comfort rules from INTERACTION.md §3 (poke targets ≥ 4 cm).
 
 export const COLOR = {
@@ -13,6 +13,8 @@ export const COLOR = {
   text: "#d6e1ee",
   textMuted: "#8b9bb0",
   warn: "#ffc56b",
+  grid: "rgba(120, 214, 255, 0.07)",
+  sheen: "rgba(150, 225, 255, 0.07)",
   badgeBg: "rgba(79, 216, 255, 0.14)",
   badgeFg: "#bdefff",
 } as const;
@@ -45,6 +47,15 @@ export const BADGE = {
 } as const;
 
 export type BadgeTone = keyof typeof BADGE;
+
+/** Holographic accents for animated frames and the voice orb: cyan into a cool violet, with a near-white hot core. */
+export const HOLO = {
+  rimA: 0x3fd0ff,
+  rimB: 0x8b7bff,
+  hot: 0xd8f8ff,
+  listen: 0x4fe3ff,
+  speak: 0xa58bff,
+} as const;
 
 export type ButtonTone = "primary" | "secondary" | "chip" | "danger" | "active";
 
@@ -79,7 +90,8 @@ export const SPACE = {
 } as const;
 
 export const MOTION = {
-  openMs: 200,
+  /** Long enough for the hologram unfold and rim draw-on to read, short enough not to delay a press. */
+  openMs: 300,
   closeMs: 140,
   glideMs: 320,
   /** Ease-out cubic: quick to respond, gentle to settle. */

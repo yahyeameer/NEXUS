@@ -44,8 +44,10 @@ import {
   ScanningBeam,
   ScientificFindingPanel,
   SpatialGlassPanel,
+  tickHolo,
+  VoicePanel,
 } from "./ui/spatial/index.js";
-import type { ButtonSpec, MarkerState, PanelContent, PanelLine } from "./ui/spatial/index.js";
+import type { ButtonSpec, MarkerState, PanelContent, PanelLine, VoiceMode } from "./ui/spatial/index.js";
 
 type Screen = "pair" | "welcome" | "globe" | "idle" | "measure" | "mark" | "selected" | "researching" | "finding" | "reason" | "sources" | "evidence" | "compare" | "logbook" | "clarify";
 
@@ -71,6 +73,8 @@ export interface AppState {
   voiceConnected: boolean;
   findings: Record<string, { id: string; status: string }>;
   captions: string[];
+  /** The voice window's state: your push-to-talk, an agent speaking, or neither. */
+  voice: { mode: VoiceMode; speaker?: string };
   lastCommand?: string;
   view: { yaw: number; scale: number };
   descriptors: string[];
@@ -87,7 +91,7 @@ export interface AppState {
 const LAYOUT = {
   face: { x: 0, y: 1.2, z: 0 },
   main: { x: 0.38, y: 1.02, z: -0.42 },
-  captions: { x: 0.38, y: 0.7, z: -0.42 },
+  captions: { x: 0.38, y: 0.63, z: -0.4 },
   evidence: { x: -0.4, y: 1.1, z: -0.46 },
   wristDock: { x: -0.42, y: 0.76, z: -0.22 },
   /** Placement guide: ahead and a little below eye level, out of the way of the surface being searched. */
@@ -112,7 +116,7 @@ const DESCRIPTOR_CHIPS: Record<TerrainFeature["kind"], string[]> = {
 export class NexusApp {
   /** Main card, docked to the front right, about 60 cm away, top edge below eye level, turned to the seated user (INTERACTION.md §3). */
   readonly main = new ScientificFindingPanel(v(LAYOUT.main), v(LAYOUT.face));
-  readonly captions = new SpatialGlassPanel("captions", 0.4, 0.07, false);
+  readonly captions = new VoicePanel();
   readonly wrist = new SpatialGlassPanel("wrist", 0.18, 0.37);
   /** Placement guide while searching for a surface: what to do, and what the device found. Display only. */
   readonly guide = new SpatialGlassPanel("guide", 0.32, 0.17, false);
@@ -209,6 +213,11 @@ export class NexusApp {
       playback: (kind, u) => {
         this.orbs.speaker(kind === "started" ? u.speaker : undefined);
         this.reportPlayback(kind, u);
+        // The voice window follows who is speaking; after the last line the queue may already hold the next.
+        queueMicrotask(() => {
+          this.renderCaptions();
+          this.changed();
+        });
       },
     });
     this.desktop = opts.desktop === true;
@@ -267,6 +276,7 @@ export class NexusApp {
       voiceConnected: this.voice.connected,
       findings: Object.fromEntries([...this.findings].map(([k, f]) => [k, { id: f.id, status: f.status }])),
       captions: [...this.captionLog],
+      voice: { mode: this.voiceMode(), speaker: this.speaker.currentSpeaker },
       lastCommand: this.lastCommand,
       view: { yaw: this.diorama.yaw, scale: this.diorama.scale },
       descriptors: [...this.descriptors],
@@ -475,6 +485,8 @@ export class NexusApp {
     if (this.placing && !this.guidePlaced && this.placement.viewerReady) this.placeGuide();
     this.input.update();
     this.placeWristMenu();
+    tickHolo(now);
+    this.captions.level(this.mic.level);
     for (const p of [this.main, this.captions, this.wrist, this.evidence, this.agents, this.guide]) p.update(now);
     this.orbs.update(now);
     if (this.ptt && now - this.ptt.lastSample >= POINTER_INTERVAL_MS) {
@@ -889,6 +901,7 @@ export class NexusApp {
     this.ptt = { startedAt: now, lastSample: 0, samples: [], micOpen: false };
     this.voice.send({ type: "ptt.start", sampleRateHz: 16000 });
     this.renderWrist();
+    this.renderCaptions();
     this.changed();
     const opened = await this.mic.start((pcm) => this.voice.audio(pcm));
     if (this.ptt) this.ptt.micOpen = opened;
@@ -907,6 +920,7 @@ export class NexusApp {
     if (typed) this.voice.send({ type: "ptt.simulated_transcript", text: typed.slice(0, 500) });
     this.voice.send({ type: "ptt.end" });
     this.renderWrist();
+    this.renderCaptions();
     this.changed();
   }
 
@@ -1232,12 +1246,19 @@ export class NexusApp {
     if (!this.api.session || this.placing) this.wrist.setOpen(false);
   }
 
+  /** Live push-to-talk mic level, 0..1, for the desktop voice window. */
+  get micLevel(): number {
+    return this.mic.level;
+  }
+
+  /** The voice window: who is talking (you, an agent or nobody) and the newest captions. */
+  private voiceMode(): VoiceMode {
+    return this.ptt ? "listening" : this.speaker.speaking ? "speaking" : "idle";
+  }
+
   private renderCaptions(): void {
-    // Newest first: the strip shows one page, so the line being spoken is never the one cut off.
-    const [latest, previous] = this.captionLog.slice(-2).reverse();
-    const lines: PanelLine[] = latest ? [{ text: latest, tone: "body" }] : [{ text: "Captions appear here.", tone: "muted" }];
-    if (previous) lines.push({ text: previous, tone: "muted" });
-    this.captions.set({ lines, rows: [] });
+    const speaking = this.speaker.currentSpeaker;
+    this.captions.show(this.voiceMode(), speaking ? agentName(speaking) : undefined, this.captionLog);
   }
 
   private caption(speaker: string, text: string): void {

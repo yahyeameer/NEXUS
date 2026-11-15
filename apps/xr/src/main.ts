@@ -15,6 +15,7 @@ import { EmulatedPlaneSurface, XrHitTestSurface } from "./ar/surfaceDetection.js
 import type { SurfaceSource } from "./ar/surfaceDetection.js";
 import { DEFAULT_STAGE } from "./ar/stage.js";
 import { SITES } from "./config.js";
+import { agentName } from "./ui/findingView.js";
 import type { Emulator } from "./emulator.js";
 import { loadSiteLocations, regionCentre } from "./planet/regions.js";
 import { DEFAULT_TABLE } from "./scene/tabletop.js";
@@ -68,6 +69,10 @@ async function boot(): Promise<void> {
     const s = app.state();
     status.textContent = `${emulator ? "Emulator (IWER, Quest 3 with hands)" : "Device"} · ${s.ar.mode} · ${s.ar.phase} · ${s.ar.environment} · ${s.paired ? "paired" : "not paired"} · ${s.screen}${s.pttActive ? " · listening" : ""}`;
     toolbar.update(s);
+    if (emulator) {
+      emulator.voiceBox.levelSource(() => app.micLevel);
+      emulator.voiceBox.state(s.voice.mode, s.voice.speaker ? agentName(s.voice.speaker) : undefined);
+    }
   };
   app.onChange(describe);
   describe();
