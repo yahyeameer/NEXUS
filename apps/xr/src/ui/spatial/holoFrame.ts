@@ -108,6 +108,18 @@ export class HoloFrame {
     this.mesh.raycast = () => undefined;
   }
 
+  /**
+   * Follows a panel trimmed to its content: the rim hugs the bottom `h` metres of a panel `fullH` metres tall. Only
+   * called when content changes, never per frame.
+   */
+  setHeight(h: number, fullH: number): void {
+    const m = this.mesh.material.uniforms;
+    (m.uOuter?.value as number[])[1] = h + 2 * this.bleed;
+    (m.uHalf?.value as number[])[1] = h / 2;
+    this.mesh.scale.y = (h + 2 * this.bleed) / (fullH + 2 * this.bleed);
+    this.mesh.position.y = -(fullH - h) / 2;
+  }
+
   /** Follows the panel's fade. */
   setOpacity(k: number): void {
     this.u.uOpacity.value = k;

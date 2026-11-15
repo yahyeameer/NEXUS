@@ -55,7 +55,7 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 
 - [ ] TESTING.md checklist complete, incl. mic-disabled run
 - [ ] Onboarding (first five minutes) polished
-- [ ] Deploy XR build to HTTPS host; backend reachable; precomputed fallback verified on a clean Quest
+- [ ] Deploy XR build to HTTPS host; backend reachable; precomputed fallback verified on a clean Quest _(static judging build with the SIE-checked offline demo: `pnpm build:xr:standalone`, deployed by `.github/workflows/pages.yml`; verified in the emulator, not yet on a clean Quest; Pages must be enabled in repo settings)_
 - [ ] Record demo video (< 3 min) — script in SUBMISSION.md
 - [ ] Upload video (YouTube/Vimeo, public)
 - [ ] Fill Devpost form; submit by Nov 17

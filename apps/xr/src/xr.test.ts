@@ -145,8 +145,7 @@ describe("finding card", () => {
       .lines.map((l) => `${l.badge ?? ""} ${l.text}`)
       .join("\n");
     expect(text).toContain("Observation OBS-1");
-    expect(text).toContain("Measurement Observation OBS-1");
-    expect(text).toContain("Research status: Ready for your review · AI-generated");
+    expect(text).toContain("Measurement Ready for your review · AI-generated · Observation OBS-1");
     expect(text).toContain("Integrity check Passed for your review: ok (rule-based fallback)");
     expect(text).toContain("Supporting evidence: EV-TEST-001, EV-TEST-002");
     expect(text).toContain("Contradicting evidence: EV-TEST-003");

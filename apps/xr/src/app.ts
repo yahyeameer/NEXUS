@@ -4,7 +4,7 @@
 // (AGENTS.md rule 1, INTERACTION.md §1 parity table).
 import type { EvidenceItem, MeasurementRecord, NexusEvent, ReviewDecision, ScientificFinding, TerrainFeature, VoiceServerMessage } from "@nexus/schemas";
 import type { Command } from "@nexus/voice";
-import { Vector3 } from "three";
+import { Quaternion, Vector3 } from "three";
 import { PlacementController } from "./ar/placementController.js";
 import type { PlacementStatus } from "./ar/placementController.js";
 import type { SurfaceSource } from "./ar/surfaceDetection.js";
@@ -24,7 +24,9 @@ import type { Utterance } from "./audio/speaker.js";
 import { SITES } from "./config.js";
 import { HandInput } from "./input/hands.js";
 import { ApiClient } from "./net/api.js";
-import type { LogbookEntry } from "./net/api.js";
+import type { LogbookEntry, NexusApi } from "./net/api.js";
+import { DemoApi, loadDemoBundle } from "./net/demoApi.js";
+import { STANDALONE } from "./config.js";
 import { VoiceClient } from "./net/voice.js";
 import { zoomedScale } from "./input/manipulate.js";
 import { pickFeature } from "./scene/featurePick.js";
@@ -68,6 +70,8 @@ export interface AppState {
   siteId?: string;
   selectedFeatureId?: string;
   paired: boolean;
+  /** Running on the precomputed offline bundle instead of live services. */
+  offline: boolean;
   pttActive: boolean;
   micOpen: boolean;
   voiceConnected: boolean;
@@ -97,6 +101,32 @@ const LAYOUT = {
   /** Placement guide: ahead and a little below eye level, out of the way of the surface being searched. */
   guide: { x: 0, y: 1.02, z: -0.55 },
 } as const;
+/** 3D viewer: the window camera sits further back (emulator.ts), so panels move out to flank the model, not cover it. */
+const DESKTOP_LAYOUT = {
+  ...LAYOUT,
+  main: { x: 0.5, y: 1.08, z: -0.5 },
+  captions: { x: 0.5, y: 0.744, z: -0.5 },
+  evidence: { x: -0.5, y: 1.16, z: -0.52 },
+  wristDock: { x: -0.5, y: 0.78, z: -0.34 },
+} as const;
+/** What kind of card each screen is, shown in small capitals above its title. */
+const EYEBROW: Record<Screen, string> = {
+  pair: "Setup",
+  welcome: "Getting started",
+  globe: "Explore",
+  idle: "Survey site",
+  measure: "Tool · Terrain ruler",
+  mark: "Tool · Your observation",
+  selected: "Feature selected",
+  researching: "Research in progress",
+  finding: "Finding · For your review",
+  reason: "Your review",
+  sources: "Provenance",
+  evidence: "Evidence",
+  compare: "Possible readings",
+  logbook: "Your reviews",
+  clarify: "Clarify",
+};
 /** A pinch within this angle of the globe's region marker opens the region. */
 const GLOBE_PICK_DEG = 9;
 
@@ -117,7 +147,7 @@ export class NexusApp {
   /** Main card, docked to the front right, about 60 cm away, top edge below eye level, turned to the seated user (INTERACTION.md §3). */
   readonly main = new ScientificFindingPanel(v(LAYOUT.main), v(LAYOUT.face));
   readonly captions = new VoicePanel();
-  readonly wrist = new SpatialGlassPanel("wrist", 0.18, 0.37);
+  readonly wrist = new SpatialGlassPanel("wrist", 0.21, 0.39);
   /** Placement guide while searching for a surface: what to do, and what the device found. Display only. */
   readonly guide = new SpatialGlassPanel("guide", 0.32, 0.17, false);
   /** Evidence window, opened from a finding card (INTERACTION.md "Open evidence: poke evidence chip"). */
@@ -144,7 +174,8 @@ export class NexusApp {
   /** Phone touch gestures: a drag or pinch on the overlay must not also count as a tap. */
   private selectGuard?: () => boolean;
   private readonly orbs = new AgentOrbs();
-  readonly api = new ApiClient();
+  /** Live services by default; the precomputed offline demo when none is reachable (net/demoApi.ts). */
+  api: NexusApi = new ApiClient();
   readonly input: HandInput;
   private readonly voice: VoiceClient;
   private readonly speaker: Speaker;
@@ -183,6 +214,10 @@ export class NexusApp {
     const { scene } = world;
     scene.add(this.main.mesh, this.captions.mesh, this.wrist.mesh, this.evidence.mesh, this.agents.mesh, this.guide.mesh, this.diorama.pivot);
     scene.add(this.main.connector.object, this.evidence.beam.object);
+    // Panels are often read at an angle (docked toward the model, the 3D viewer's raised camera): anisotropic
+    // filtering keeps their text crisp instead of smearing it along the slant.
+    const aniso = world.renderer.capabilities.getMaxAnisotropy();
+    for (const p of [this.main, this.captions, this.wrist, this.evidence, this.agents, this.guide]) p.setAnisotropy(aniso);
     this.guide.close();
     this.applyStage(DEFAULT_STAGE);
     this.placement = new PlacementController(world.renderer, scene, {
@@ -225,6 +260,26 @@ export class NexusApp {
     this.render();
     this.renderCaptions();
     this.renderWrist();
+    // A static judging build has no services to pair with: open straight into the offline demo.
+    if (STANDALONE) void this.startOffline();
+  }
+
+  private readonly viewQuat = new Quaternion();
+
+  /**
+   * 3D viewer only: panels are laid out around a seated head, but the window looks at the scene from further back and
+   * above, so panels turned to that head look twisted on screen. Here they take the window camera's orientation and
+   * sit square to the screen, like a product shot. In a headset the panels keep facing the wearer.
+   */
+  private squareToWindow(): void {
+    const cam = this.world.renderer.xr.isPresenting ? this.world.renderer.xr.getCamera() : this.world.camera;
+    cam.getWorldQuaternion(this.viewQuat);
+    for (const p of [this.main, this.captions, this.wrist, this.evidence, this.guide]) p.mesh.quaternion.copy(this.viewQuat);
+  }
+
+  /** Where panels dock: the seated layout in a headset, a wider one in the 3D viewer so they flank the model. */
+  private get layout(): typeof LAYOUT | typeof DESKTOP_LAYOUT {
+    return this.desktop ? DESKTOP_LAYOUT : LAYOUT;
   }
 
   /** Mouse and keyboard shortcuts press the same buttons a hand would, so nothing is desktop-only. */
@@ -252,6 +307,7 @@ export class NexusApp {
   setDesktop(desktop: boolean): void {
     this.desktop = desktop;
     this.input.setDesktop(desktop);
+    this.applyStage(this.stage);
   }
 
   /** Smooth zoom for the mouse wheel; the wrist menu's Zoom buttons take fixed steps. */
@@ -274,6 +330,7 @@ export class NexusApp {
       pttActive: this.ptt !== undefined,
       micOpen: this.ptt?.micOpen ?? false,
       voiceConnected: this.voice.connected,
+      offline: this.api.offline,
       findings: Object.fromEntries([...this.findings].map(([k, f]) => [k, { id: f.id, status: f.status }])),
       captions: [...this.captionLog],
       voice: { mode: this.voiceMode(), speaker: this.speaker.currentSpeaker },
@@ -345,10 +402,10 @@ export class NexusApp {
     this.stage = stage;
     this.diorama.placeAt(stage.surface, stage.yaw);
     const face = v(stage.head);
-    this.main.setDock(v(viewToWorld(stage, LAYOUT.main)), face);
-    this.captions.place(v(viewToWorld(stage, LAYOUT.captions)), face);
+    this.main.setDock(v(viewToWorld(stage, this.layout.main)), face);
+    this.captions.place(v(viewToWorld(stage, this.layout.captions)), face);
     // Evidence opens to the front left, mirroring the card, so both can be read side by side.
-    this.evidence.place(v(viewToWorld(stage, LAYOUT.evidence)), face);
+    this.evidence.place(v(viewToWorld(stage, this.layout.evidence)), face);
     if (this.site && this.selected) this.syncSelection();
   }
 
@@ -488,6 +545,7 @@ export class NexusApp {
     tickHolo(now);
     this.captions.level(this.mic.level);
     for (const p of [this.main, this.captions, this.wrist, this.evidence, this.agents, this.guide]) p.update(now);
+    if (this.desktop) this.squareToWindow();
     this.orbs.update(now);
     if (this.ptt && now - this.ptt.lastSample >= POINTER_INTERVAL_MS) {
       this.ptt.lastSample = now;
@@ -516,7 +574,10 @@ export class NexusApp {
     const anchorWorld = anchor ? this.diorama.toWorldInto(anchor, this.scratch) : undefined;
     this.main.link(anchorWorld);
     this.evidence.link(anchorWorld, this.scratchB);
-    if (this.agents.mesh.visible && anchorWorld) this.agents.follow(this.scratchB.copy(anchorWorld), this.head);
+    if (this.agents.mesh.visible && anchorWorld) {
+      this.agents.follow(this.scratchB.copy(anchorWorld), this.head);
+      if (this.desktop) this.agents.mesh.quaternion.copy(this.viewQuat);
+    }
     if (this.agents.isOpen && this.orbs.count === 0) this.agents.close();
     this.main.connector.update(now, dt);
     this.evidence.beam.update(now, dt);
@@ -615,11 +676,13 @@ export class NexusApp {
 
   private async onKeypad(key: string): Promise<void> {
     if (key === "del") this.code = this.code.slice(0, -1);
+    else if (key === "offline") return this.startOffline();
     else if (key === "go") {
       const res = await this.api.pair(this.code, USER_ID);
       this.code = "";
       if (!res.ok) {
-        this.notice = res.error === "api unreachable" ? "Cannot reach the NEXUS service." : "That pairing code did not work.";
+        this.notice =
+          res.error === "api unreachable" ? "Cannot reach the NEXUS service. Poke Offline demo to explore the precomputed research." : "That pairing code did not work.";
         return this.render();
       }
       this.notice = undefined;
@@ -629,6 +692,27 @@ export class NexusApp {
       return this.go("welcome");
     } else if (/^\d$/.test(key) && this.code.length < 8) this.code += key;
     this.render();
+  }
+
+  /**
+   * Switches to the precomputed offline demo: no pairing, no network after the bundle loads, no voice gateway. Every
+   * finding still carries the SIE decision it got when the bundle was built (`pnpm demo:bundle`).
+   */
+  async startOffline(): Promise<void> {
+    if (this.api.offline && this.api.session) return;
+    const bundle = await loadDemoBundle();
+    if (!bundle.ok) {
+      this.notice = "The offline demo is not available in this build.";
+      return this.render();
+    }
+    const api = new DemoApi(bundle.value);
+    await api.pair("", USER_ID);
+    this.api = api;
+    this.code = "";
+    this.notice = undefined;
+    api.events((e) => void this.onEvent(e));
+    this.caption("narrator", "Offline demo: precomputed research from archival NASA data, checked by the integrity engine. Voice needs the NEXUS service.");
+    this.go("welcome");
   }
 
   private async onCard(action: string): Promise<void> {
@@ -897,6 +981,11 @@ export class NexusApp {
 
   private async startTalking(): Promise<void> {
     if (this.ptt || !this.api.session) return;
+    if (this.api.offline) {
+      // Speech recognition runs in services/voice-gateway (AGENTS.md rule 6), so offline the hands are the only way in.
+      this.caption("narrator", "Voice needs the NEXUS service. Everything here works by hand.");
+      return;
+    }
     const now = performance.now();
     this.ptt = { startedAt: now, lastSample: 0, samples: [], micOpen: false };
     this.voice.send({ type: "ptt.start", sampleRateHz: 16000 });
@@ -1074,16 +1163,21 @@ export class NexusApp {
     const finding = this.selected ? this.findings.get(this.selected) : undefined;
     switch (this.screen) {
       case "pair": {
-        lines.push({ text: "Pair this headset", tone: "title" }, { text: "Poke the pairing code shown by the NEXUS service.", tone: "muted" });
+        lines.push({ text: "Pair this headset", tone: "title" }, { text: "Poke the pairing code shown by the NEXUS service, or poke Offline demo to explore without one.", tone: "muted" });
         lines.push({ text: this.code ? this.code.replace(/./g, "● ") : "—", tone: "title" });
         const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+        rows.push([{ id: "pair:offline", label: "Offline demo", style: "chip" }]);
         rows.push([{ id: "pair:del", label: "⌫" }, { id: "pair:0", label: "0" }, { id: "pair:go", label: "Pair", style: "primary" }]);
         for (let r = 2; r >= 0; r--) rows.push(digits.slice(r * 3, r * 3 + 3).map((d) => ({ id: `pair:${d}`, label: d })));
         break;
       }
       case "welcome":
-        lines.push({ text: "Welcome to NEXUS.", tone: "title" }, { text: "Pinch to select. Palm up for the menu.", tone: "body" });
-        lines.push({ text: "Point at a glowing ring on the terrain and pinch to select a feature. Poke buttons with your fingertip.", tone: "muted" });
+        // The whole loop in three steps, so a first-time visitor knows where this is going before touching anything.
+        lines.push({ text: "Welcome to NEXUS.", tone: "title" }, { text: "Investigate the Moon with your hands.", tone: "body" });
+        lines.push({ text: "Point at a glowing ring on the terrain and pinch to select it.", tone: "body", badge: "1" });
+        lines.push({ text: "Poke Investigate. AI agents research it, and every claim is checked before you see it.", tone: "body", badge: "2" });
+        lines.push({ text: "Read the finding and its evidence, then approve, reject or mark it inconclusive. You decide.", tone: "body", badge: "3" });
+        lines.push({ text: "Pinch to select. Palm up for the menu. Poke buttons with your fingertip; voice is optional.", tone: "muted" });
         rows.push([{ id: "onboard:skip", label: "Skip" }, { id: "onboard:start", label: "Start", style: "primary" }]);
         break;
       case "globe":
@@ -1152,7 +1246,14 @@ export class NexusApp {
         break;
       case "researching":
         lines.push({ text: feature?.label ?? "Investigation", tone: "title" }, { text: "Researching", tone: "muted" });
-        for (const p of this.progress) lines.push({ text: p, tone: "body" });
+        for (const p of this.progress) {
+          // "Agent: state" lines become a status pill and the agent's name, so the team's progress scans at a glance.
+          const m = /^(.+): (working|done|could not finish)$/.exec(p);
+          if (!m) lines.push({ text: p, tone: "body" });
+          else if (m[2] === "working") lines.push({ text: m[1] ?? p, tone: "body", badge: "Working", badgeTone: "measurement" });
+          else if (m[2] === "done") lines.push({ text: m[1] ?? p, tone: "muted", badge: "Done", badgeTone: "observation" });
+          else lines.push({ text: m[1] ?? p, tone: "warn", badge: "Stopped", badgeTone: "uncertainty-high" });
+        }
         rows.push([{ id: "back:idle", label: "Back" }]);
         break;
       case "finding": {
@@ -1205,7 +1306,11 @@ export class NexusApp {
       }
     }
     if (this.notice) lines.splice(1, 0, { text: this.notice, tone: "warn" });
-    return { lines, rows };
+    // AGENTS.md rule 7: precomputed research is never presented as a live run.
+    if (this.api.offline && (this.screen === "researching" || this.screen === "finding")) {
+      lines.splice(1, 0, { text: "Replayed precomputed research (offline demo). Archival NASA data, not live mission data.", tone: "muted", badge: "Offline", badgeTone: "offline" });
+    }
+    return { lines, rows, eyebrow: EYEBROW[this.screen] };
   }
 
   private screenFallback(): PanelContent {
@@ -1217,21 +1322,22 @@ export class NexusApp {
     const talking = this.ptt !== undefined;
     const site = this.env.mode === "region" ? SITES.find((s) => s.siteId === this.site?.siteId) : undefined;
     this.wrist.set({
-      lines: [{ text: site ? `NEXUS · ${site.name}` : "NEXUS · The Moon", tone: "muted" }],
+      eyebrow: "NEXUS",
+      lines: [{ text: site ? site.name : "The Moon", tone: "body" }],
       rows: [
         [
           { id: "wrist:logbook", label: "Logbook" },
           { id: "wrist:stop", label: "Stop" },
         ],
         [
-          { id: "view:zoom_out", label: "−" },
+          { id: "view:zoom_out", label: "Zoom −" },
           { id: "view:reset", label: "Reset" },
-          { id: "view:zoom_in", label: "+" },
+          { id: "view:zoom_in", label: "Zoom +" },
         ],
         [
-          { id: "view:rotate_left", label: "↺" },
+          { id: "view:rotate_left", label: "↺ Turn" },
           { id: "view:focus", label: "Focus" },
-          { id: "view:rotate_right", label: "↻" },
+          { id: "view:rotate_right", label: "Turn ↻" },
         ],
         SITES.map((s) => ({ id: `site:${s.siteId}`, label: s.short, style: s.siteId === site?.siteId && this.env.mode === "region" ? ("chip" as const) : ("secondary" as const) })),
         [
@@ -1300,7 +1406,7 @@ export class NexusApp {
     } else {
       // Controllers and desktop mode: park the menu to the far left, clear of the evidence window.
       this.wrist.open();
-      const dock = viewToWorld(this.stage, LAYOUT.wristDock);
+      const dock = viewToWorld(this.stage, this.layout.wristDock);
       mesh.position.set(dock.x, dock.y, dock.z);
       mesh.lookAt(this.head);
     }

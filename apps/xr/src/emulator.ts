@@ -22,9 +22,14 @@ export async function installEmulator(opts: { devUi: boolean; desktop?: boolean 
   device.primaryInputMode = "hand";
   // Seated eye height, looking at the desk (scene/world.ts).
   device.position.set(0, 1.2, 0);
-  // Desktop view only: lean back a little and tilt the head about 23° so the diorama and both panels sit in the middle of the window.
-  if (opts.desktop) device.position.set(0, 1.22, 0.12);
-  const pitch = opts.desktop ? -0.37 : 0;
+  // Desktop view only: a headset's wide field of view squeezed into a window stretches everything off-centre, so
+  // panels to the side look sheared. A narrower lens from further back shows the model and both panels nearly
+  // square-on, like a product shot. The headset itself is never affected.
+  if (opts.desktop) {
+    device.position.set(0, 1.42, 0.66);
+    device.fovy = 0.86;
+  }
+  const pitch = opts.desktop ? -0.4 : 0;
   device.quaternion.set(Math.sin(pitch / 2), 0, 0, Math.cos(pitch / 2));
   if (opts.devUi) {
     // Keyboard and mouse control of the head and both hands; lazy so tests and the headset never load it.

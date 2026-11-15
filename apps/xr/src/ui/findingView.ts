@@ -16,7 +16,7 @@ export const REASON_CHIPS = ["Insufficient evidence", "Measurement method doubtf
 
 export interface CardLine {
   text: string;
-  tone: "title" | "body" | "muted" | "warn";
+  tone: "title" | "body" | "muted" | "warn" | "label";
   /** Claim type badge, shown before the text. */
   badge?: string;
   badgeTone?: BadgeTone;
@@ -98,8 +98,8 @@ export function cardModel(f: ScientificFinding): CardModel {
   const decisionHeld = f.decision.outcome === "REJECT" || f.decision.outcome === "REQUEST_MORE_EVIDENCE";
   const lines: CardLine[] = [
     { text: f.title, tone: "title" },
-    { text: `Research status: ${STATUS_LABEL[f.status]} · AI-generated`, tone: "muted" },
-    { text: `Observation ${f.observationId}`, tone: "muted", badge: CLAIM_LABEL[f.claimType], badgeTone: f.claimType },
+    // One status line: claim type, where it stands, that an AI wrote it, and the observation it answers.
+    { text: `${STATUS_LABEL[f.status]} · AI-generated · Observation ${f.observationId}`, tone: "muted", badge: CLAIM_LABEL[f.claimType], badgeTone: f.claimType },
     {
       text: `${OUTCOME_LABEL[f.decision.outcome]}: ${f.decision.reason} (${f.decision.source === "jev" ? "Jev decision" : "rule-based fallback"})`,
       tone: decisionHeld ? "warn" : "muted",
@@ -118,17 +118,20 @@ export function cardModel(f: ScientificFinding): CardModel {
     }
   }
   if (f.contested) lines.push({ text: "Contested: the evidence points both ways", tone: "warn" });
-  lines.push({ text: f.summary, tone: "body" });
+  if (f.summary) lines.push({ text: "Summary", tone: "label" }, { text: f.summary, tone: "body" });
+  if (f.claims.length || f.possibleInterpretations.length) lines.push({ text: "Claims, each with its type", tone: "label" });
   for (const c of f.claims) lines.push({ text: c.text, tone: "body", badge: CLAIM_LABEL[c.claimType], badgeTone: c.claimType });
   for (const i of f.possibleInterpretations) {
     lines.push({ text: `One possible reading: ${i.explanation}`, tone: "body", badge: CLAIM_LABEL.interpretation, badgeTone: "interpretation" });
   }
   const sides = evidenceSides(f);
+  lines.push({ text: "Evidence", tone: "label" });
   lines.push({ text: `Supporting evidence: ${ids(sides.supporting)}`, tone: "muted" });
   lines.push({ text: `Contradicting evidence: ${ids(sides.contradicting)}`, tone: sides.contradicting.length ? "body" : "muted" });
   const datasets = [...new Set(f.sources.map((s) => s.dataset))];
   lines.push({ text: `Source datasets: ${datasets.length ? datasets.join("; ") : "none listed"}`, tone: "muted" });
   // SCIENTIFIC_INTEGRITY.md: removed claims stay visible so the scientist sees what the SIE took out.
+  if (f.removedClaims.length) lines.push({ text: "Removed by the integrity check", tone: "label" });
   for (const r of f.removedClaims) lines.push({ text: `Removed: no evidence. ${r.text}`, tone: "muted" });
   if (f.review?.rationaleText) lines.push({ text: `Your reason: ${f.review.rationaleText}`, tone: "muted" });
   return {

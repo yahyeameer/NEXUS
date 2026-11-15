@@ -32,14 +32,13 @@ export function evidenceContent(id: string, items: readonly EvidenceItem[], meas
 export class EvidenceViewer extends SpatialGlassPanel {
   /** Evidence beam from the window to the feature it supports. */
   readonly beam = new SpatialConnector("evidence-beam");
-  private readonly corner = { x: 0, y: 0 };
+  private readonly corner = { x: 0 };
 
   constructor() {
     super("evidence", 0.34, 0.4);
     this.setOpen(false);
     // Lower inner corner (towards the diorama), in panel-local metres from the centre.
     this.corner.x = this.widthM / 2 - 0.02;
-    this.corner.y = -this.heightM / 2 + 0.02;
   }
 
   /** Ties the beam from the window's lower inner corner to `anchorWorld`; hides it when there is no anchor. */
@@ -49,7 +48,7 @@ export class EvidenceViewer extends SpatialGlassPanel {
       return;
     }
     this.mesh.updateWorldMatrix(true, false);
-    scratch.set(this.corner.x, this.corner.y, 0);
+    scratch.set(this.corner.x, this.bottomM + 0.02, 0);
     this.mesh.localToWorld(scratch);
     this.beam.set(scratch, anchorWorld, 0.04);
     if (!this.beam.shown) this.beam.show();

@@ -67,6 +67,6 @@ Each adapter ships with a `Fake*Adapter` used in tests and precomputed mode.
 
 ## Deployment (competition build)
 
-- XR client: static HTTPS host (e.g. GitHub Pages) — required for WebXR.
+- XR client: static HTTPS host (GitHub Pages via `.github/workflows/pages.yml`, built with `pnpm build:xr:standalone`) — required for WebXR.
 - Backend: Docker-based host with HTTPS + WSS. CORS allow-list = the XR origin only.
-- Precomputed bundle shipped with the client so the core demo runs even if the backend is unreachable.
+- Precomputed bundle shipped with the client so the core demo runs even if the backend is unreachable: `data/demo/bundle.json`, built by `pnpm demo:bundle` through the real API and SIE, served by `apps/xr/src/net/demoApi.ts` behind the same `NexusApi` interface as the live client.

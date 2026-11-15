@@ -19,8 +19,29 @@ const logbookEntry = z.object({
 });
 export type LogbookEntry = z.infer<typeof logbookEntry>;
 
-export class ApiClient {
+/**
+ * Everything the headset asks of services/api. Two implementations: ApiClient talks to the live service; DemoApi
+ * (net/demoApi.ts) replays the SIE-checked precomputed bundle when no service is reachable.
+ */
+export interface NexusApi {
   session?: HumanSession;
+  /** True when answers come from the precomputed offline bundle, so the UI can say so (AGENTS.md rule 7). */
+  readonly offline: boolean;
+  pair(pairingCode: string, userId: string): Promise<Result<HumanSession>>;
+  createObservation(siteId: string, featureId: string | undefined, spatialAnchor: SpatialAnchor, description?: string): Promise<Result<Observation>>;
+  evidence(siteId: string): Promise<Result<{ items: EvidenceItem[]; measurements: MeasurementRecord[] }>>;
+  getObservation(id: string): Promise<Result<Observation>>;
+  getFinding(id: string): Promise<Result<ScientificFinding>>;
+  listFindings(): Promise<Result<ScientificFinding[]>>;
+  review(findingId: string, decision: ReviewDecision, rationaleText?: string): Promise<Result<ScientificFinding>>;
+  logbook(): Promise<Result<LogbookEntry[]>>;
+  emit(type: EventType, correlationId: string, payload: unknown): Promise<Result<unknown>>;
+  events(onEvent: (e: NexusEvent) => void): () => void;
+}
+
+export class ApiClient implements NexusApi {
+  session?: HumanSession;
+  readonly offline = false;
 
   async pair(pairingCode: string, userId: string): Promise<Result<HumanSession>> {
     const r = await this.call("POST", "/sessions", { pairingCode, userId }, sessionValue);

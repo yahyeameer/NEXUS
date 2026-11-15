@@ -9,6 +9,7 @@ export interface XrState {
   siteId?: string;
   selectedFeatureId?: string;
   paired: boolean;
+  offline: boolean;
   pttActive: boolean;
   micOpen: boolean;
   voiceConnected: boolean;

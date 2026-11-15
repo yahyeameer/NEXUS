@@ -6,8 +6,11 @@ const VOICE = process.env.VOICE_GATEWAY_URL ?? "http://localhost:4100";
 
 // WebXR on Quest Browser needs HTTPS, so dev serves over TLS on the LAN (ARCHITECTURE.md, port 5173).
 // The services sit behind the same origin, so a headset on the LAN needs only this one address.
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [basicSsl()],
+  // `--mode standalone` (pnpm build:xr:standalone) is the static judging build: relative asset paths so it runs from
+  // any HTTPS sub-path such as GitHub Pages, and the mode itself opens the offline demo (src/config.ts STANDALONE).
+  base: process.env.NEXUS_BASE ?? (mode === "standalone" ? "./" : "/"),
   // Terrain tiles, textures and features are served from the repo's data/ folder (data/terrain/<SITE_ID>).
   publicDir: "../../data",
   server: {
@@ -20,4 +23,4 @@ export default defineConfig({
     },
   },
   build: { chunkSizeWarningLimit: 1200 },
-});
+}));
