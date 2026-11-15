@@ -87,6 +87,11 @@ and `services/orchestrator/src/demoBundle.test.ts` fails if the committed bundle
 - `pnpm build:xr:standalone` builds `apps/xr/dist` as a static site with relative paths. It opens straight into the
   offline demo: no pairing code, no backend. `.github/workflows/pages.yml` deploys it to GitHub Pages on every push to
   `main` (one-time setup: Settings → Pages → Source: GitHub Actions).
+- Cloudflare Pages: `pnpm deploy:cloudflare` builds the same static site and uploads it with Wrangler (direct
+  upload, so git LFS files are already resolved locally). First run: `npx wrangler@4 login`, then
+  `npx wrangler@4 pages project create nexus --production-branch main`. The site is served at
+  `https://nexus.pages.dev` (or the name Cloudflare assigns if `nexus` is taken). Largest file is 2.3 MB, well under
+  Pages' 25 MiB per-file limit. Only the static client runs there; the Fastify services need a container host.
 - `?offline=1` opens any build in offline mode, and the pairing card's **Offline demo** button switches to it when the
   service cannot be reached.
 - Offline, the research run is replayed with its real routed team (orbs fly, agents report), the card and research

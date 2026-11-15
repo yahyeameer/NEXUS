@@ -17,7 +17,8 @@
     "sie:redteam": "vitest run --project redteam --passWithNoTests",
     "dev:xr:client": "pnpm --filter @nexus/xr dev",
     "demo:bundle": "pnpm --filter @nexus/orchestrator demo:bundle",
-    "build:xr:standalone": "pnpm demo:bundle && pnpm --filter @nexus/xr build:standalone"
+    "build:xr:standalone": "pnpm demo:bundle && pnpm --filter @nexus/xr build:standalone",
+    "deploy:cloudflare": "pnpm build:xr:standalone && npx wrangler@4 pages deploy apps/xr/dist --project-name nexus"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",
