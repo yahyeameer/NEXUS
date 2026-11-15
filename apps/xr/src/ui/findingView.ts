@@ -16,7 +16,7 @@ export const REASON_CHIPS = ["Insufficient evidence", "Measurement method doubtf
 
 export interface CardLine {
   text: string;
-  tone: "title" | "body" | "muted" | "warn";
+  tone: "title" | "body" | "muted" | "warn" | "label";
   /** Claim type badge, shown before the text. */
   badge?: string;
   badgeTone?: BadgeTone;
@@ -118,17 +118,20 @@ export function cardModel(f: ScientificFinding): CardModel {
     }
   }
   if (f.contested) lines.push({ text: "Contested: the evidence points both ways", tone: "warn" });
-  lines.push({ text: f.summary, tone: "body" });
+  if (f.summary) lines.push({ text: "Summary", tone: "label" }, { text: f.summary, tone: "body" });
+  if (f.claims.length || f.possibleInterpretations.length) lines.push({ text: "Claims, each with its type", tone: "label" });
   for (const c of f.claims) lines.push({ text: c.text, tone: "body", badge: CLAIM_LABEL[c.claimType], badgeTone: c.claimType });
   for (const i of f.possibleInterpretations) {
     lines.push({ text: `One possible reading: ${i.explanation}`, tone: "body", badge: CLAIM_LABEL.interpretation, badgeTone: "interpretation" });
   }
   const sides = evidenceSides(f);
+  lines.push({ text: "Evidence", tone: "label" });
   lines.push({ text: `Supporting evidence: ${ids(sides.supporting)}`, tone: "muted" });
   lines.push({ text: `Contradicting evidence: ${ids(sides.contradicting)}`, tone: sides.contradicting.length ? "body" : "muted" });
   const datasets = [...new Set(f.sources.map((s) => s.dataset))];
   lines.push({ text: `Source datasets: ${datasets.length ? datasets.join("; ") : "none listed"}`, tone: "muted" });
   // SCIENTIFIC_INTEGRITY.md: removed claims stay visible so the scientist sees what the SIE took out.
+  if (f.removedClaims.length) lines.push({ text: "Removed by the integrity check", tone: "label" });
   for (const r of f.removedClaims) lines.push({ text: `Removed: no evidence. ${r.text}`, tone: "muted" });
   if (f.review?.rationaleText) lines.push({ text: `Your reason: ${f.review.rationaleText}`, tone: "muted" });
   return {

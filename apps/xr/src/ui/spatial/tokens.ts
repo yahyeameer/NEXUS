@@ -15,6 +15,12 @@ export const COLOR = {
   warn: "#ffc56b",
   badgeBg: "rgba(79, 216, 255, 0.14)",
   badgeFg: "#bdefff",
+  /** Section labels and the eyebrow above a title: the accent, dimmed so it organises without shouting. */
+  label: "#7fd9f5",
+  /** Hairlines that divide a card into header, sections and actions. */
+  hairline: "rgba(140, 200, 230, 0.2)",
+  /** Soft light along the top of the glass, as if lit from above. */
+  sheen: "rgba(255, 255, 255, 0.07)",
 } as const;
 
 /** The same accent and states as numbers, for three.js materials. */
@@ -50,25 +56,31 @@ export type BadgeTone = keyof typeof BADGE;
 
 export type ButtonTone = "primary" | "secondary" | "chip" | "danger" | "active";
 
+/**
+ * Buttons, in order of visual weight. Only `primary` is a solid colour, so each card has one obvious next step;
+ * `danger` is a tinted outline, not a red slab, so Reject is clear without competing with Approve.
+ */
 export const BUTTON: Record<ButtonTone, { top: string; bottom: string; rim: string; fg: string }> = {
-  primary: { top: "#1fb5dc", bottom: "#0b7fa3", rim: "#8eeaff", fg: "#ffffff" },
-  secondary: { top: "rgba(44, 56, 74, 0.95)", bottom: "rgba(28, 36, 50, 0.95)", rim: "#4a5d78", fg: "#e6eef8" },
-  chip: { top: "rgba(20, 74, 92, 0.95)", bottom: "rgba(12, 52, 66, 0.95)", rim: "#3fbfe0", fg: "#dcf8ff" },
-  danger: { top: "#a8434c", bottom: "#7c2733", rim: "#e58a92", fg: "#ffffff" },
+  primary: { top: "#27bfe6", bottom: "#0a7da1", rim: "#a6efff", fg: "#ffffff" },
+  secondary: { top: "rgba(52, 66, 88, 0.72)", bottom: "rgba(30, 40, 56, 0.72)", rim: "#5b7090", fg: "#e6eef8" },
+  chip: { top: "rgba(22, 82, 102, 0.78)", bottom: "rgba(12, 54, 70, 0.78)", rim: "#45c4e4", fg: "#dcf8ff" },
+  danger: { top: "rgba(138, 52, 62, 0.62)", bottom: "rgba(92, 30, 40, 0.62)", rim: "#f08f98", fg: "#ffe3e5" },
   active: { top: "#5ee3ff", bottom: "#22a9cf", rim: "#e6fbff", fg: "#03202b" },
 };
 
 /** Font stack: a crisp UI face where installed, system UI elsewhere. Canvas has no web-font wait, so no network fonts. */
 export const FONT_FAMILY = `"Inter", "Segoe UI Variable Display", "Segoe UI", "SF Pro Display", system-ui, sans-serif`;
 
-export type TextTone = "title" | "body" | "muted" | "warn";
+export type TextTone = "title" | "body" | "muted" | "warn" | "label";
 
 /** Type scale in metres of cap-to-descender height; ≥ 9 mm stays readable at 60 cm on Quest 3. */
 export const TYPE: Record<TextTone, { size: number; color: string; weight: number; tracking: number }> = {
-  title: { size: 0.0146, color: COLOR.textStrong, weight: 650, tracking: -0.0002 },
-  body: { size: 0.0102, color: COLOR.text, weight: 420, tracking: 0 },
-  muted: { size: 0.0091, color: COLOR.textMuted, weight: 420, tracking: 0.00005 },
+  title: { size: 0.016, color: COLOR.textStrong, weight: 680, tracking: -0.0002 },
+  body: { size: 0.0104, color: COLOR.text, weight: 440, tracking: 0 },
+  muted: { size: 0.0092, color: COLOR.textMuted, weight: 440, tracking: 0.00005 },
   warn: { size: 0.0097, color: COLOR.warn, weight: 600, tracking: 0 },
+  /** Section heading: small capitals with wide tracking and a hairline, e.g. "CLAIMS", "EVIDENCE". */
+  label: { size: 0.0086, color: COLOR.label, weight: 700, tracking: 0.0011 },
 };
 
 export const SPACE = {
