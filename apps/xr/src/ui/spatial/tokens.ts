@@ -42,6 +42,8 @@ export const BADGE = {
   "uncertainty-low": { bg: "rgba(139, 155, 176, 0.2)", fg: "#dbe4ef" },
   "uncertainty-medium": { bg: "rgba(255, 184, 77, 0.18)", fg: "#ffdca3" },
   "uncertainty-high": { bg: "rgba(229, 120, 130, 0.22)", fg: "#ffccd1" },
+  /** Precomputed or simulated content (AGENTS.md rule 7): neutral slate, so it reads as a label, not a warning. */
+  offline: { bg: "rgba(148, 163, 184, 0.22)", fg: "#e2e8f0" },
 } as const;
 
 export type BadgeTone = keyof typeof BADGE;

@@ -59,7 +59,7 @@ export class ScientificFindingPanel extends SpatialGlassPanel {
   link(anchorWorld: Vector3 | undefined): void {
     if (!this.attachedTo || !anchorWorld) return;
     this.mesh.updateWorldMatrix(true, false);
-    this.corner.set(-this.widthM / 2 + 0.02, -this.heightM / 2 + 0.02, 0);
+    this.corner.set(-this.widthM / 2 + 0.02, this.bottomM + 0.02, 0);
     this.mesh.localToWorld(this.corner);
     this.connector.set(this.corner, anchorWorld, 0.05);
   }

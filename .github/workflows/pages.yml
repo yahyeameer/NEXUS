@@ -1,0 +1,47 @@
+name: Deploy judging build
+
+# The static judging build (AGENTS.md §6 "Demo safety", ARCHITECTURE.md "Deployment"): the XR client on GitHub Pages
+# over HTTPS, opening straight into the SIE-checked precomputed demo, so it works with every provider and service down.
+# One-time setup: repository Settings → Pages → Source: "GitHub Actions".
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          lfs: true
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # Rebuilds data/demo/bundle.json through the real SIE (fails if any demo site stops passing), then the client.
+      - run: pnpm build:xr:standalone
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: apps/xr/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

@@ -1,0 +1,682 @@
+{
+  "kind": "nexus-precomputed-demo",
+  "note": "Precomputed research replayed through the NEXUS API and Scientific Integrity Engine at build time. Archival NASA data, not live mission data.",
+  "sites": [
+    {
+      "siteId": "HADLEY_RILLE",
+      "featureId": "HADLEY_RILLE",
+      "agentIds": [
+        "26_lola_elevation_researcher",
+        "25_lroc_imagery_researcher",
+        "11_lunar_geology_researcher",
+        "33_hypothesis_generator",
+        "34_alternative_explanation_researcher",
+        "37_uncertainty_analyst",
+        "22_research_synthesis_specialist"
+      ],
+      "observation": {
+        "id": "OBS-DEMO-HADLEY_RILLE",
+        "siteId": "HADLEY_RILLE",
+        "source": "hand_select",
+        "featureId": "HADLEY_RILLE",
+        "spatialAnchor": {
+          "terrainFeatureId": "HADLEY_RILLE"
+        },
+        "createdBy": "demo-bundle",
+        "createdAt": "2026-11-15T00:00:00.000Z"
+      },
+      "finding": {
+        "id": "FND-DEMO-HADLEY_RILLE",
+        "observationId": "OBS-DEMO-HADLEY_RILLE",
+        "title": "Hadley Rille: depth and width from the LROC terrain model",
+        "summary": "The LROC terrain model gives a rille depth of about 308 m and about 1610 m between the rim crests along this reach. The orthophoto shows a curving channel with one wall lit and the other in shade.",
+        "claimType": "measurement",
+        "claims": [
+          {
+            "text": "The LROC terrain model gives a rille depth of about 308 m along this reach.",
+            "claimType": "measurement",
+            "evidenceIds": [
+              "EV-HADLEY_RILLE-001"
+            ],
+            "measurementIds": [
+              "MEAS-HADLEY_RILLE-HADLEY_RILLE-DEPTH"
+            ]
+          },
+          {
+            "text": "The LROC terrain model gives about 1610 m between the two rim crests.",
+            "claimType": "measurement",
+            "evidenceIds": [
+              "EV-HADLEY_RILLE-001"
+            ],
+            "measurementIds": [
+              "MEAS-HADLEY_RILLE-HADLEY_RILLE-WIDTH"
+            ]
+          },
+          {
+            "text": "The labelled reach of the rille is about 1.85 km long.",
+            "claimType": "measurement",
+            "evidenceIds": [
+              "EV-HADLEY_RILLE-001"
+            ],
+            "measurementIds": [
+              "MEAS-HADLEY_RILLE-HADLEY_RILLE-LENGTH"
+            ]
+          },
+          {
+            "text": "The orthophoto shows a curving channel crossing the cratered mare plain, with one wall brightly lit and the other in shade.",
+            "claimType": "observation",
+            "evidenceIds": [
+              "EV-HADLEY_RILLE-002"
+            ]
+          }
+        ],
+        "removedClaims": [],
+        "possibleInterpretations": [],
+        "sources": [
+          {
+            "dataset": "LRO LROC NAC DTM",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_E261N0036.IMG",
+            "evidenceId": "EV-HADLEY_RILLE-001",
+            "observationId": "OBS-DEMO-HADLEY_RILLE"
+          },
+          {
+            "dataset": "LRO LROC NAC orthophoto",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_M111578606_2M.IMG",
+            "evidenceId": "EV-HADLEY_RILLE-002",
+            "observationId": "OBS-DEMO-HADLEY_RILLE"
+          }
+        ],
+        "spatialAnchor": {
+          "terrainFeatureId": "HADLEY_RILLE"
+        },
+        "uncertainty": {
+          "level": "low",
+          "explanation": "Values come from one LROC terrain model tied to LOLA elevations; the width depends on where the rim-crest method finds each crest."
+        },
+        "contested": false,
+        "decision": {
+          "outcome": "ACCEPT_FOR_REVIEW",
+          "reason": "validated claims with sufficient evidence",
+          "source": "fallback"
+        },
+        "status": "ready_for_review",
+        "spokenBriefing": {
+          "script": "I investigated Hadley Rille. The LROC terrain model gives about 308 metres of depth along this reach. The LROC terrain model gives about 1610 metres between the rim crests. Overall uncertainty is low.",
+          "sentenceEvidence": [
+            [],
+            [
+              "MEAS-HADLEY_RILLE-HADLEY_RILLE-DEPTH"
+            ],
+            [
+              "MEAS-HADLEY_RILLE-HADLEY_RILLE-WIDTH"
+            ],
+            []
+          ],
+          "voiceDecision": "SPEAK_AS_APPROVED",
+          "speakerAgentId": "26_lola_elevation_researcher"
+        },
+        "createdAt": "2026-11-15T00:00:00.000Z",
+        "updatedAt": "2026-11-15T00:00:00.000Z"
+      },
+      "evidence": {
+        "items": [
+          {
+            "id": "EV-HADLEY_RILLE-001",
+            "siteId": "HADLEY_RILLE",
+            "type": "dataset",
+            "title": "LROC NAC digital terrain model, Apollo 15 landing site (2 m/post)",
+            "spokenLabel": "the LROC terrain model",
+            "dataset": "LRO LROC NAC DTM",
+            "productId": "NAC_DTM_APOLLO15_E261N0036",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_E261N0036.IMG",
+            "acquiredAt": "2009-10-30",
+            "region": {
+              "featureId": "HADLEY_RILLE",
+              "bbox": [
+                -356.47091,
+                26.04478,
+                -356.36817,
+                26.13712
+              ],
+              "crs": "planetocentric longitude/latitude, degrees (west, south, east, north)"
+            },
+            "credit": "NASA/GSFC/Arizona State University",
+            "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+          },
+          {
+            "id": "EV-HADLEY_RILLE-002",
+            "siteId": "HADLEY_RILLE",
+            "type": "image",
+            "title": "LROC NAC orthophoto M111578606, Apollo 15 landing site (2 m/pixel)",
+            "spokenLabel": "the LROC orthophoto",
+            "dataset": "LRO LROC NAC orthophoto",
+            "productId": "NAC_DTM_APOLLO15_M111578606_2M",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_M111578606_2M.IMG",
+            "acquiredAt": "2009-10-30T21:48:58Z",
+            "region": {
+              "featureId": "HADLEY_RILLE",
+              "bbox": [
+                -356.47091,
+                26.04478,
+                -356.36817,
+                26.13712
+              ],
+              "crs": "planetocentric longitude/latitude, degrees (west, south, east, north)"
+            },
+            "credit": "NASA/GSFC/Arizona State University",
+            "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+          },
+          {
+            "id": "EV-HADLEY_RILLE-003",
+            "siteId": "HADLEY_RILLE",
+            "type": "text",
+            "title": "LROC NAC DTM README: accuracy of the Apollo 15 terrain model",
+            "spokenLabel": "the terrain model notes",
+            "dataset": "LRO LROC NAC DTM",
+            "productId": "NAC_DTM_APOLLO15_E261N0036",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_README.TXT",
+            "excerpt": "Products are tied to LOLA elevations with RMS error of 1.74 m to 7.0 different LOLA orbit tracks.",
+            "credit": "NASA/GSFC/Arizona State University",
+            "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+          },
+          {
+            "id": "EV-HADLEY_RILLE-004",
+            "siteId": "HADLEY_RILLE",
+            "type": "text",
+            "title": "USGS Gazetteer of Planetary Nomenclature: Rima Hadley (length 116.09 km, centre 25.72 N 3.15 E)",
+            "spokenLabel": "the planetary names gazetteer",
+            "sourceUrl": "https://planetarynames.wr.usgs.gov/Feature/5064",
+            "excerpt": "Named from nearby Mountain (Mons Hadley).",
+            "region": {
+              "featureId": "HADLEY_RILLE"
+            },
+            "credit": "USGS Astrogeology Science Center / IAU WGPSN",
+            "license": "Public domain: U.S. Government work (USGS Gazetteer of Planetary Nomenclature)"
+          },
+          {
+            "id": "EV-HADLEY_RILLE-005",
+            "siteId": "HADLEY_RILLE",
+            "type": "text",
+            "title": "NSSDCA: Apollo 15 Lunar Module record, first EVA traverse",
+            "spokenLabel": "the Apollo 15 mission record",
+            "sourceUrl": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1971-063C",
+            "excerpt": "The traverse on the first EVA covered 10.3 km to the edge of Hadley Rille to Elbow Crater and near St. George Crater and back to the LM, where a core sample was taken from three meters below the surface.",
+            "credit": "NASA Space Science Data Coordinated Archive",
+            "license": "NASA web content; quoted under NASA media usage guidelines"
+          },
+          {
+            "id": "EV-HADLEY_RILLE-006",
+            "siteId": "HADLEY_RILLE",
+            "type": "text",
+            "title": "NSSDCA: Apollo 15 mission summary, landing site",
+            "spokenLabel": "the Apollo 15 mission summary",
+            "sourceUrl": "https://nssdc.gsfc.nasa.gov/planetary/lunar/apollo15info.html",
+            "excerpt": "Landing Site: Hadley Rille/Apennines (26.13 N, 3.63 E)",
+            "credit": "NASA Space Science Data Coordinated Archive",
+            "license": "NASA web content; quoted under NASA media usage guidelines"
+          }
+        ],
+        "measurements": [
+          {
+            "id": "MEAS-HADLEY_RILLE-HADLEY_RILLE-WIDTH",
+            "siteId": "HADLEY_RILLE",
+            "featureId": "HADLEY_RILLE",
+            "quantity": "width",
+            "value": 1610.4,
+            "unit": "m",
+            "method": "mean rim-crest separation over 3 DEM cross-section(s)",
+            "sourceEvidenceId": "EV-HADLEY_RILLE-001",
+            "computedAt": "2026-11-15T00:00:00.000Z"
+          },
+          {
+            "id": "MEAS-HADLEY_RILLE-HADLEY_RILLE-DEPTH",
+            "siteId": "HADLEY_RILLE",
+            "featureId": "HADLEY_RILLE",
+            "quantity": "depth",
+            "value": 307.8,
+            "unit": "m",
+            "method": "mean rim crest minus floor over 3 DEM cross-section(s)",
+            "sourceEvidenceId": "EV-HADLEY_RILLE-001",
+            "computedAt": "2026-11-15T00:00:00.000Z"
+          },
+          {
+            "id": "MEAS-HADLEY_RILLE-HADLEY_RILLE-LENGTH",
+            "siteId": "HADLEY_RILLE",
+            "featureId": "HADLEY_RILLE",
+            "quantity": "length",
+            "value": 1.85,
+            "unit": "km",
+            "method": "planimetric length of the labelled centreline",
+            "sourceEvidenceId": "EV-HADLEY_RILLE-001",
+            "computedAt": "2026-11-15T00:00:00.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "siteId": "ELBOW_CRATER",
+      "featureId": "ELBOW_CRATER",
+      "agentIds": [
+        "26_lola_elevation_researcher",
+        "25_lroc_imagery_researcher",
+        "11_lunar_geology_researcher",
+        "37_uncertainty_analyst",
+        "22_research_synthesis_specialist"
+      ],
+      "observation": {
+        "id": "OBS-DEMO-ELBOW_CRATER",
+        "siteId": "ELBOW_CRATER",
+        "source": "hand_select",
+        "featureId": "ELBOW_CRATER",
+        "spatialAnchor": {
+          "terrainFeatureId": "ELBOW_CRATER"
+        },
+        "createdBy": "demo-bundle",
+        "createdAt": "2026-11-15T00:00:00.000Z"
+      },
+      "finding": {
+        "id": "FND-DEMO-ELBOW_CRATER",
+        "observationId": "OBS-DEMO-ELBOW_CRATER",
+        "title": "Elbow crater: a shallow crater on the rille rim",
+        "summary": "The LROC terrain model gives Elbow crater a depth of about 34 m and a rim-to-rim diameter of about 373 m. A depth this shallow for its width is consistent with a degraded crater.",
+        "claimType": "interpretation",
+        "claims": [
+          {
+            "text": "The LROC terrain model gives Elbow crater a depth of about 34 m.",
+            "claimType": "measurement",
+            "evidenceIds": [
+              "EV-ELBOW_CRATER-001"
+            ],
+            "measurementIds": [
+              "MEAS-ELBOW_CRATER-ELBOW_CRATER-DEPTH"
+            ]
+          },
+          {
+            "text": "The LROC terrain model gives a rim-to-rim diameter of about 373 m.",
+            "claimType": "measurement",
+            "evidenceIds": [
+              "EV-ELBOW_CRATER-001"
+            ],
+            "measurementIds": [
+              "MEAS-ELBOW_CRATER-ELBOW_CRATER-DIAMETER"
+            ]
+          },
+          {
+            "text": "The orthophoto shows a rounded, subdued depression at the labelled position, beside the shadowed rille wall.",
+            "claimType": "observation",
+            "evidenceIds": [
+              "EV-ELBOW_CRATER-002"
+            ]
+          },
+          {
+            "text": "A depth this shallow for its width is consistent with a degraded crater.",
+            "claimType": "interpretation",
+            "evidenceIds": [
+              "MEAS-ELBOW_CRATER-ELBOW_CRATER-DEPTH",
+              "MEAS-ELBOW_CRATER-ELBOW_CRATER-DIAMETER"
+            ]
+          }
+        ],
+        "removedClaims": [],
+        "possibleInterpretations": [],
+        "sources": [
+          {
+            "dataset": "LRO LROC NAC DTM",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_E261N0036.IMG",
+            "evidenceId": "EV-ELBOW_CRATER-001",
+            "observationId": "OBS-DEMO-ELBOW_CRATER"
+          },
+          {
+            "dataset": "LRO LROC NAC orthophoto",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_M111578606_2M.IMG",
+            "evidenceId": "EV-ELBOW_CRATER-002",
+            "observationId": "OBS-DEMO-ELBOW_CRATER"
+          }
+        ],
+        "spatialAnchor": {
+          "terrainFeatureId": "ELBOW_CRATER"
+        },
+        "uncertainty": {
+          "level": "medium",
+          "explanation": "Elbow sits on the rille rim, so the radial profiles mix crater and rille topography."
+        },
+        "contested": false,
+        "decision": {
+          "outcome": "ACCEPT_FOR_REVIEW",
+          "reason": "validated claims with sufficient evidence",
+          "source": "fallback"
+        },
+        "status": "ready_for_review",
+        "spokenBriefing": {
+          "script": "I investigated Elbow crater. The LROC terrain model gives about 34 metres of depth. The LROC terrain model gives about 373 metres across the rim. This is consistent with a degraded crater. Overall uncertainty is medium.",
+          "sentenceEvidence": [
+            [],
+            [
+              "MEAS-ELBOW_CRATER-ELBOW_CRATER-DEPTH"
+            ],
+            [
+              "MEAS-ELBOW_CRATER-ELBOW_CRATER-DIAMETER"
+            ],
+            [
+              "MEAS-ELBOW_CRATER-ELBOW_CRATER-DEPTH",
+              "MEAS-ELBOW_CRATER-ELBOW_CRATER-DIAMETER"
+            ],
+            []
+          ],
+          "voiceDecision": "SPEAK_AS_APPROVED",
+          "speakerAgentId": "26_lola_elevation_researcher"
+        },
+        "createdAt": "2026-11-15T00:00:00.000Z",
+        "updatedAt": "2026-11-15T00:00:00.000Z"
+      },
+      "evidence": {
+        "items": [
+          {
+            "id": "EV-ELBOW_CRATER-001",
+            "siteId": "ELBOW_CRATER",
+            "type": "dataset",
+            "title": "LROC NAC digital terrain model, Apollo 15 landing site (2 m/post)",
+            "spokenLabel": "the LROC terrain model",
+            "dataset": "LRO LROC NAC DTM",
+            "productId": "NAC_DTM_APOLLO15_E261N0036",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_E261N0036.IMG",
+            "acquiredAt": "2009-10-30",
+            "region": {
+              "featureId": "ELBOW_CRATER",
+              "bbox": [
+                -356.43664,
+                25.99703,
+                -356.36326,
+                26.06298
+              ],
+              "crs": "planetocentric longitude/latitude, degrees (west, south, east, north)"
+            },
+            "credit": "NASA/GSFC/Arizona State University",
+            "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+          },
+          {
+            "id": "EV-ELBOW_CRATER-002",
+            "siteId": "ELBOW_CRATER",
+            "type": "image",
+            "title": "LROC NAC orthophoto M111578606, Apollo 15 landing site (2 m/pixel)",
+            "spokenLabel": "the LROC orthophoto",
+            "dataset": "LRO LROC NAC orthophoto",
+            "productId": "NAC_DTM_APOLLO15_M111578606_2M",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_M111578606_2M.IMG",
+            "acquiredAt": "2009-10-30T21:48:58Z",
+            "region": {
+              "featureId": "ELBOW_CRATER",
+              "bbox": [
+                -356.43664,
+                25.99703,
+                -356.36326,
+                26.06298
+              ],
+              "crs": "planetocentric longitude/latitude, degrees (west, south, east, north)"
+            },
+            "credit": "NASA/GSFC/Arizona State University",
+            "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+          },
+          {
+            "id": "EV-ELBOW_CRATER-003",
+            "siteId": "ELBOW_CRATER",
+            "type": "text",
+            "title": "LROC NAC DTM README: accuracy of the Apollo 15 terrain model",
+            "spokenLabel": "the terrain model notes",
+            "dataset": "LRO LROC NAC DTM",
+            "productId": "NAC_DTM_APOLLO15_E261N0036",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_README.TXT",
+            "excerpt": "Products are tied to LOLA elevations with RMS error of 1.74 m to 7.0 different LOLA orbit tracks.",
+            "credit": "NASA/GSFC/Arizona State University",
+            "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+          },
+          {
+            "id": "EV-ELBOW_CRATER-004",
+            "siteId": "ELBOW_CRATER",
+            "type": "text",
+            "title": "USGS Gazetteer of Planetary Nomenclature: Elbow (diameter 0.34 km, centre 26.03 N 3.60 E)",
+            "spokenLabel": "the planetary names gazetteer",
+            "sourceUrl": "https://planetarynames.wr.usgs.gov/Feature/1759",
+            "excerpt": "Astronaut-named feature, Apollo 15 site.",
+            "region": {
+              "featureId": "ELBOW_CRATER"
+            },
+            "credit": "USGS Astrogeology Science Center / IAU WGPSN",
+            "license": "Public domain: U.S. Government work (USGS Gazetteer of Planetary Nomenclature)"
+          },
+          {
+            "id": "EV-ELBOW_CRATER-005",
+            "siteId": "ELBOW_CRATER",
+            "type": "text",
+            "title": "NSSDCA: Apollo 15 Lunar Module record, first EVA traverse",
+            "spokenLabel": "the Apollo 15 mission record",
+            "sourceUrl": "https://nssdc.gsfc.nasa.gov/nmc/spacecraft/display.action?id=1971-063C",
+            "excerpt": "The traverse on the first EVA covered 10.3 km to the edge of Hadley Rille to Elbow Crater and near St. George Crater and back to the LM, where a core sample was taken from three meters below the surface.",
+            "credit": "NASA Space Science Data Coordinated Archive",
+            "license": "NASA web content; quoted under NASA media usage guidelines"
+          }
+        ],
+        "measurements": [
+          {
+            "id": "MEAS-ELBOW_CRATER-ELBOW_CRATER-DEPTH",
+            "siteId": "ELBOW_CRATER",
+            "featureId": "ELBOW_CRATER",
+            "quantity": "depth",
+            "value": 34,
+            "unit": "m",
+            "method": "mean rim crest minus floor minimum on 16 radial DEM profiles",
+            "sourceEvidenceId": "EV-ELBOW_CRATER-001",
+            "computedAt": "2026-11-15T00:00:00.000Z"
+          },
+          {
+            "id": "MEAS-ELBOW_CRATER-ELBOW_CRATER-DIAMETER",
+            "siteId": "ELBOW_CRATER",
+            "featureId": "ELBOW_CRATER",
+            "quantity": "diameter",
+            "value": 372.6,
+            "unit": "m",
+            "method": "twice the mean rim crest distance on 16 radial DEM profiles",
+            "sourceEvidenceId": "EV-ELBOW_CRATER-001",
+            "computedAt": "2026-11-15T00:00:00.000Z"
+          }
+        ]
+      }
+    },
+    {
+      "siteId": "HADLEY_DELTA",
+      "featureId": "HADLEY_DELTA_SLOPE",
+      "agentIds": [
+        "26_lola_elevation_researcher",
+        "25_lroc_imagery_researcher",
+        "11_lunar_geology_researcher",
+        "37_uncertainty_analyst",
+        "22_research_synthesis_specialist"
+      ],
+      "observation": {
+        "id": "OBS-DEMO-HADLEY_DELTA_SLOPE",
+        "siteId": "HADLEY_DELTA",
+        "source": "hand_select",
+        "featureId": "HADLEY_DELTA_SLOPE",
+        "spatialAnchor": {
+          "terrainFeatureId": "HADLEY_DELTA_SLOPE"
+        },
+        "createdBy": "demo-bundle",
+        "createdAt": "2026-11-15T00:00:00.000Z"
+      },
+      "finding": {
+        "id": "FND-DEMO-HADLEY_DELTA_SLOPE",
+        "observationId": "OBS-DEMO-HADLEY_DELTA_SLOPE",
+        "title": "Hadley Delta: slope of the north-west flank",
+        "summary": "The LROC terrain model gives a mean slope of about 18.6 degrees across the labelled area. The orthophoto shows a textured slope surface dotted with small craters.",
+        "claimType": "measurement",
+        "claims": [
+          {
+            "text": "The LROC terrain model gives a mean slope of about 18.6 degrees across the labelled area.",
+            "claimType": "measurement",
+            "evidenceIds": [
+              "EV-HADLEY_DELTA-001"
+            ],
+            "measurementIds": [
+              "MEAS-HADLEY_DELTA-HADLEY_DELTA_SLOPE-SLOPE"
+            ]
+          },
+          {
+            "text": "The orthophoto shows a textured slope surface dotted with small craters.",
+            "claimType": "observation",
+            "evidenceIds": [
+              "EV-HADLEY_DELTA-002"
+            ]
+          }
+        ],
+        "removedClaims": [],
+        "possibleInterpretations": [],
+        "sources": [
+          {
+            "dataset": "LRO LROC NAC DTM",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_E261N0036.IMG",
+            "evidenceId": "EV-HADLEY_DELTA-001",
+            "observationId": "OBS-DEMO-HADLEY_DELTA_SLOPE"
+          },
+          {
+            "dataset": "LRO LROC NAC orthophoto",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_M111578606_2M.IMG",
+            "evidenceId": "EV-HADLEY_DELTA-002",
+            "observationId": "OBS-DEMO-HADLEY_DELTA_SLOPE"
+          }
+        ],
+        "spatialAnchor": {
+          "terrainFeatureId": "HADLEY_DELTA_SLOPE"
+        },
+        "uncertainty": {
+          "level": "medium",
+          "explanation": "A mean over the labelled area hides steeper and gentler patches."
+        },
+        "contested": false,
+        "decision": {
+          "outcome": "ACCEPT_FOR_REVIEW",
+          "reason": "validated claims with sufficient evidence",
+          "source": "fallback"
+        },
+        "status": "ready_for_review",
+        "spokenBriefing": {
+          "script": "I investigated the Hadley Delta slope. The LROC terrain model gives about 18.6 degrees of mean slope. The image shows a textured slope surface dotted with small craters. Overall uncertainty is medium.",
+          "sentenceEvidence": [
+            [],
+            [
+              "MEAS-HADLEY_DELTA-HADLEY_DELTA_SLOPE-SLOPE"
+            ],
+            [
+              "EV-HADLEY_DELTA-002"
+            ],
+            []
+          ],
+          "voiceDecision": "SPEAK_AS_APPROVED",
+          "speakerAgentId": "26_lola_elevation_researcher"
+        },
+        "createdAt": "2026-11-15T00:00:00.000Z",
+        "updatedAt": "2026-11-15T00:00:00.000Z"
+      },
+      "evidence": {
+        "items": [
+          {
+            "id": "EV-HADLEY_DELTA-001",
+            "siteId": "HADLEY_DELTA",
+            "type": "dataset",
+            "title": "LROC NAC digital terrain model, Apollo 15 landing site (2 m/post)",
+            "spokenLabel": "the LROC terrain model",
+            "dataset": "LRO LROC NAC DTM",
+            "productId": "NAC_DTM_APOLLO15_E261N0036",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_E261N0036.IMG",
+            "acquiredAt": "2009-10-30",
+            "region": {
+              "featureId": "HADLEY_DELTA_SLOPE",
+              "bbox": [
+                -356.43495,
+                25.70056,
+                -356.32488,
+                25.79949
+              ],
+              "crs": "planetocentric longitude/latitude, degrees (west, south, east, north)"
+            },
+            "credit": "NASA/GSFC/Arizona State University",
+            "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+          },
+          {
+            "id": "EV-HADLEY_DELTA-002",
+            "siteId": "HADLEY_DELTA",
+            "type": "image",
+            "title": "LROC NAC orthophoto M111578606, Apollo 15 landing site (2 m/pixel)",
+            "spokenLabel": "the LROC orthophoto",
+            "dataset": "LRO LROC NAC orthophoto",
+            "productId": "NAC_DTM_APOLLO15_M111578606_2M",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_M111578606_2M.IMG",
+            "acquiredAt": "2009-10-30T21:48:58Z",
+            "region": {
+              "featureId": "HADLEY_DELTA_SLOPE",
+              "bbox": [
+                -356.43495,
+                25.70056,
+                -356.32488,
+                25.79949
+              ],
+              "crs": "planetocentric longitude/latitude, degrees (west, south, east, north)"
+            },
+            "credit": "NASA/GSFC/Arizona State University",
+            "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+          },
+          {
+            "id": "EV-HADLEY_DELTA-003",
+            "siteId": "HADLEY_DELTA",
+            "type": "text",
+            "title": "LROC NAC DTM README: accuracy of the Apollo 15 terrain model",
+            "spokenLabel": "the terrain model notes",
+            "dataset": "LRO LROC NAC DTM",
+            "productId": "NAC_DTM_APOLLO15_E261N0036",
+            "sourceUrl": "https://pds.lroc.im-ldi.com/data/LRO-L-LROC-5-RDR-V1.0/LROLRC_2001/DATA/SDP/NAC_DTM/APOLLO15/NAC_DTM_APOLLO15_README.TXT",
+            "excerpt": "Products are tied to LOLA elevations with RMS error of 1.74 m to 7.0 different LOLA orbit tracks.",
+            "credit": "NASA/GSFC/Arizona State University",
+            "license": "Public domain: LROC data product from the PDS archive (LROC Terms of Use, https://lroc.im-ldi.com/about/terms)"
+          },
+          {
+            "id": "EV-HADLEY_DELTA-004",
+            "siteId": "HADLEY_DELTA",
+            "type": "text",
+            "title": "USGS Gazetteer of Planetary Nomenclature: Mons Hadley Delta (diameter 17.24 km, centre 25.72 N 3.71 E)",
+            "spokenLabel": "the planetary names gazetteer",
+            "sourceUrl": "https://planetarynames.wr.usgs.gov/Feature/3984",
+            "excerpt": "Named from nearby mountain (Mons Hadley).",
+            "region": {
+              "featureId": "HADLEY_DELTA_SLOPE"
+            },
+            "credit": "USGS Astrogeology Science Center / IAU WGPSN",
+            "license": "Public domain: U.S. Government work (USGS Gazetteer of Planetary Nomenclature)"
+          },
+          {
+            "id": "EV-HADLEY_DELTA-005",
+            "siteId": "HADLEY_DELTA",
+            "type": "text",
+            "title": "NASA Apollo 15 mission page: photo caption, Hadley Delta",
+            "spokenLabel": "the NASA Apollo 15 photo caption",
+            "sourceUrl": "https://www.nasa.gov/mission/apollo-15/",
+            "excerpt": "Hadley Delta in the background rises approximately 4,000 meters (about 13,124 feet) above the plain. The base of the mountain is approximately 5 kilometers (about three statue miles) away.",
+            "credit": "NASA",
+            "license": "NASA web content; quoted under NASA media usage guidelines"
+          }
+        ],
+        "measurements": [
+          {
+            "id": "MEAS-HADLEY_DELTA-HADLEY_DELTA_SLOPE-SLOPE",
+            "siteId": "HADLEY_DELTA",
+            "featureId": "HADLEY_DELTA_SLOPE",
+            "quantity": "slope",
+            "value": 18.6,
+            "unit": "deg",
+            "method": "mean Horn 3x3 slope over posts within 500 m",
+            "sourceEvidenceId": "EV-HADLEY_DELTA-001",
+            "computedAt": "2026-11-15T00:00:00.000Z"
+          }
+        ]
+      }
+    }
+  ]
+}

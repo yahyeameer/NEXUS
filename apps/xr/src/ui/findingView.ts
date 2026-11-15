@@ -98,8 +98,8 @@ export function cardModel(f: ScientificFinding): CardModel {
   const decisionHeld = f.decision.outcome === "REJECT" || f.decision.outcome === "REQUEST_MORE_EVIDENCE";
   const lines: CardLine[] = [
     { text: f.title, tone: "title" },
-    { text: `Research status: ${STATUS_LABEL[f.status]} · AI-generated`, tone: "muted" },
-    { text: `Observation ${f.observationId}`, tone: "muted", badge: CLAIM_LABEL[f.claimType], badgeTone: f.claimType },
+    // One status line: claim type, where it stands, that an AI wrote it, and the observation it answers.
+    { text: `${STATUS_LABEL[f.status]} · AI-generated · Observation ${f.observationId}`, tone: "muted", badge: CLAIM_LABEL[f.claimType], badgeTone: f.claimType },
     {
       text: `${OUTCOME_LABEL[f.decision.outcome]}: ${f.decision.reason} (${f.decision.source === "jev" ? "Jev decision" : "rule-based fallback"})`,
       tone: decisionHeld ? "warn" : "muted",

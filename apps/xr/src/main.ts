@@ -66,8 +66,11 @@ async function boot(): Promise<void> {
 
   const describe = () => {
     const s = app.state();
-    status.textContent = `${emulator ? "Emulator (IWER, Quest 3 with hands)" : "Device"} · ${s.ar.mode} · ${s.ar.phase} · ${s.ar.environment} · ${s.paired ? "paired" : "not paired"} · ${s.screen}${s.pttActive ? " · listening" : ""}`;
+    status.textContent = `${emulator ? "Emulator (IWER, Quest 3 with hands)" : "Device"} · ${s.ar.mode} · ${s.ar.phase} · ${s.ar.environment} · ${s.offline ? "offline demo" : s.paired ? "paired" : "not paired"} · ${s.screen}${s.pttActive ? " · listening" : ""}`;
     toolbar.update(s);
+    // The typed stand-in for speech goes to the voice gateway, which the offline demo does not have.
+    const sim = document.querySelector<HTMLElement>(".sim-speech");
+    if (sim) sim.style.display = s.offline ? "none" : "";
   };
   app.onChange(describe);
   describe();

@@ -77,6 +77,22 @@ Query options (development and tests):
 `pnpm dev:xr:client` runs only this client. It needs the services running elsewhere: set `API_URL` and
 `VOICE_GATEWAY_URL` for the Vite proxy.
 
+## Offline demo and the judging build
+
+The judged build must work with every provider and service down (AGENTS.md §6 "Demo safety"). The client ships the
+precomputed research for the three demo sites in `data/demo/bundle.json`, built by `pnpm demo:bundle`, which replays
+`data/precomputed` through the real API and SIE. So every finding in it carries the SIE decision it was actually given,
+and `services/orchestrator/src/demoBundle.test.ts` fails if the committed bundle drifts from what the SIE produces today.
+
+- `pnpm build:xr:standalone` builds `apps/xr/dist` as a static site with relative paths. It opens straight into the
+  offline demo: no pairing code, no backend. `.github/workflows/pages.yml` deploys it to GitHub Pages on every push to
+  `main` (one-time setup: Settings → Pages → Source: GitHub Actions).
+- `?offline=1` opens any build in offline mode, and the pairing card's **Offline demo** button switches to it when the
+  service cannot be reached.
+- Offline, the research run is replayed with its real routed team (orbs fly, agents report), the card and research
+  screen say "Replayed precomputed research (offline demo)", reviews stay in the browser tab and fill the logbook, and
+  voice is off (speech recognition only runs in `services/voice-gateway`). Every action still works by hand.
+
 ## On a device
 
 Run `pnpm dev` and open `https://<your-machine>:5173` on the same network: Quest Browser on a Quest 3/3S/Pro, or

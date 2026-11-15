@@ -65,6 +65,8 @@ export class SpatialGlassPanel {
   private fade?: Fade;
   private glide?: Glide;
   private closing = false;
+  /** Height of glass actually drawn, up from the bottom edge; the panel shrinks to its content (no empty glass). */
+  private visibleH: number;
 
   constructor(
     readonly name: string,
@@ -73,6 +75,7 @@ export class SpatialGlassPanel {
     /** Display-only panels (no buttons) show their first page and never grow paging buttons. */
     private readonly paging = true,
   ) {
+    this.visibleH = heightM;
     this.canvas = document.createElement("canvas");
     this.canvas.width = Math.round(widthM * PX_PER_M);
     this.canvas.height = Math.round(heightM * PX_PER_M);
@@ -90,6 +93,25 @@ export class SpatialGlassPanel {
 
   get object(): Object3D {
     return this.mesh;
+  }
+
+  /** Panel-local y (metres from the centre) of the drawn glass's bottom edge, for connectors and beams. */
+  get bottomM(): number {
+    return -this.heightM / 2;
+  }
+
+  /** Panel-local y (metres from the centre) of the drawn glass's top edge. */
+  get topM(): number {
+    return -this.heightM / 2 + this.visibleH;
+  }
+
+  /**
+   * Sharper text when a panel is seen at an angle (the 3D viewer, a card turned toward the model). Call once with the
+   * renderer's maximum; costs a little texture bandwidth, nothing per frame.
+   */
+  setAnisotropy(level: number): void {
+    this.texture.anisotropy = level;
+    this.texture.needsUpdate = true;
   }
 
   /** Shown, or on its way in. */
@@ -222,23 +244,6 @@ export class SpatialGlassPanel {
     const { ctx, canvas } = this;
     const s = PX_PER_M;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    // Dark translucent glass with a faint lit rim and a thin cyan accent along the top edge.
-    const bg = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    bg.addColorStop(0, COLOR.glassTop);
-    bg.addColorStop(1, COLOR.glassBottom);
-    ctx.fillStyle = bg;
-    roundRect(ctx, 0, 0, canvas.width, canvas.height, SPACE.radius * s);
-    ctx.fill();
-    ctx.lineWidth = 0.0014 * s;
-    ctx.strokeStyle = COLOR.glassRim;
-    roundRect(ctx, ctx.lineWidth / 2, ctx.lineWidth / 2, canvas.width - ctx.lineWidth, canvas.height - ctx.lineWidth, SPACE.radius * s);
-    ctx.stroke();
-    const bar = ctx.createLinearGradient(0, 0, canvas.width, 0);
-    bar.addColorStop(0, "rgba(79, 216, 255, 0)");
-    bar.addColorStop(0.5, COLOR.accent);
-    bar.addColorStop(1, "rgba(79, 216, 255, 0)");
-    ctx.fillStyle = bar;
-    ctx.fillRect(SPACE.radius * s, 0.0016 * s, canvas.width - 2 * SPACE.radius * s, 0.0016 * s);
 
     // Buttons bottom-up; text fills what is left above them.
     const rows = [...this.content.rows];
@@ -254,6 +259,12 @@ export class SpatialGlassPanel {
         { id: "page:next", label: `More (${this.page + 1}/${pages.length}) ▶`, style: "secondary" },
       ]);
     }
+    // Fit the glass to what this page holds, so a short screen is a short card rather than a tall empty one. Buttons
+    // keep their place at the bottom (steady poke targets, captions stay adjacent); the empty glass comes off the top.
+    // Paged panels and display-only panels with no text keep their full size.
+    const pageText = (pages[this.page] ?? []).reduce((h, l) => h + FONT[l.tone].size * (l.gapAfter ? 1.9 : 1.4), 0);
+    const needed = 2 * MARGIN + pageText + (img ? imgH / s + 0.004 : 0) + rows.length * (BUTTON_H + GAP) + (rows.length ? GAP : 0);
+    this.fitTo(pages.length > 1 || textLines.length === 0 ? this.heightM : Math.min(this.heightM, Math.max(needed, 0.08)));
     this.buttons = [];
     rows.forEach((row, r) => {
       const y = MARGIN + r * (BUTTON_H + GAP);
@@ -261,7 +272,9 @@ export class SpatialGlassPanel {
       row.forEach((b, i) => this.buttons.push({ ...b, rect: { x: MARGIN + i * (w + GAP), y, w, h: BUTTON_H } }));
     });
 
-    let y = MARGIN * s;
+    const top = (this.heightM - this.visibleH) * s;
+    this.drawGlass(top, this.visibleH * s);
+    let y = top + MARGIN * s;
     let lineIndex = 0;
     for (const l of pages[this.page] ?? []) {
       if (img && lineIndex === 1) {
@@ -325,6 +338,49 @@ export class SpatialGlassPanel {
       ctx.textAlign = "left";
     }
     this.texture.needsUpdate = true;
+  }
+
+  /** Dark translucent glass with a faint lit rim and a thin cyan accent along the top edge, from `top`, `h` pixels tall. */
+  private drawGlass(top: number, h: number): void {
+    const { ctx, canvas } = this;
+    const s = PX_PER_M;
+    const bg = ctx.createLinearGradient(0, top, 0, top + h);
+    bg.addColorStop(0, COLOR.glassTop);
+    bg.addColorStop(1, COLOR.glassBottom);
+    ctx.fillStyle = bg;
+    roundRect(ctx, 0, top, canvas.width, h, SPACE.radius * s);
+    ctx.fill();
+    ctx.lineWidth = 0.0014 * s;
+    ctx.strokeStyle = COLOR.glassRim;
+    roundRect(ctx, ctx.lineWidth / 2, top + ctx.lineWidth / 2, canvas.width - ctx.lineWidth, h - ctx.lineWidth, SPACE.radius * s);
+    ctx.stroke();
+    const bar = ctx.createLinearGradient(0, 0, canvas.width, 0);
+    bar.addColorStop(0, "rgba(79, 216, 255, 0)");
+    bar.addColorStop(0.5, COLOR.accent);
+    bar.addColorStop(1, "rgba(79, 216, 255, 0)");
+    ctx.fillStyle = bar;
+    ctx.fillRect(SPACE.radius * s, top + 0.0016 * s, canvas.width - 2 * SPACE.radius * s, 0.0016 * s);
+  }
+
+  /**
+   * Trims the plane to the bottom `h` metres of the canvas. The mesh origin stays at the full panel's centre, so
+   * button rects, poke and ray mapping (toLocal) are unchanged; only the drawn and hittable area shrinks, which also
+   * keeps an empty strip of glass from blocking a ray aimed at the terrain behind it.
+   */
+  private fitTo(h: number): void {
+    if (Math.abs(h - this.visibleH) < 1e-4) return;
+    this.visibleH = h;
+    const pos = this.mesh.geometry.getAttribute("position");
+    const uv = this.mesh.geometry.getAttribute("uv");
+    // PlaneGeometry(1×1 segments): vertices 0,1 on top, 2,3 on the bottom; canvas row 0 is uv v = 1.
+    pos.setY(0, -this.heightM / 2 + h);
+    pos.setY(1, -this.heightM / 2 + h);
+    uv.setY(0, h / this.heightM);
+    uv.setY(1, h / this.heightM);
+    pos.needsUpdate = true;
+    uv.needsUpdate = true;
+    this.mesh.geometry.computeBoundingSphere();
+    this.mesh.geometry.computeBoundingBox();
   }
 
   /** Wrap every line to the panel width; badges take room on the first wrapped line. */

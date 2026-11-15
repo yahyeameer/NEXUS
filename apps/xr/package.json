@@ -8,7 +8,8 @@
     "build": "vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "build:standalone": "vite build --mode standalone"
   },
   "dependencies": {
     "@iwer/devui": "2.7.0",

@@ -3,6 +3,12 @@
 export const API_BASE = import.meta.env.VITE_API_URL ?? "/api";
 export const VOICE_URL = import.meta.env.VITE_VOICE_URL ?? "/voice";
 
+/**
+ * Standalone build for a static HTTPS host (judging): no services, so the app opens straight into the precomputed
+ * offline demo (net/demoApi.ts). `?offline=1` does the same in any build.
+ */
+export const STANDALONE = import.meta.env.MODE === "standalone" || (typeof window !== "undefined" && new URLSearchParams(window.location.search).has("offline"));
+
 /** The three judged demo sites (data/terrain/<SITE_ID>), in wrist-menu order. */
 export const SITES = [
   { siteId: "HADLEY_RILLE", name: "Hadley Rille", short: "Rille", names: ["hadley rille", "the rille site"] },

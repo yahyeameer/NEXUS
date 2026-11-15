@@ -24,7 +24,9 @@ import type { Utterance } from "./audio/speaker.js";
 import { SITES } from "./config.js";
 import { HandInput } from "./input/hands.js";
 import { ApiClient } from "./net/api.js";
-import type { LogbookEntry } from "./net/api.js";
+import type { LogbookEntry, NexusApi } from "./net/api.js";
+import { DemoApi, loadDemoBundle } from "./net/demoApi.js";
+import { STANDALONE } from "./config.js";
 import { VoiceClient } from "./net/voice.js";
 import { zoomedScale } from "./input/manipulate.js";
 import { pickFeature } from "./scene/featurePick.js";
@@ -66,6 +68,8 @@ export interface AppState {
   siteId?: string;
   selectedFeatureId?: string;
   paired: boolean;
+  /** Running on the precomputed offline bundle instead of live services. */
+  offline: boolean;
   pttActive: boolean;
   micOpen: boolean;
   voiceConnected: boolean;
@@ -140,7 +144,8 @@ export class NexusApp {
   /** Phone touch gestures: a drag or pinch on the overlay must not also count as a tap. */
   private selectGuard?: () => boolean;
   private readonly orbs = new AgentOrbs();
-  readonly api = new ApiClient();
+  /** Live services by default; the precomputed offline demo when none is reachable (net/demoApi.ts). */
+  api: NexusApi = new ApiClient();
   readonly input: HandInput;
   private readonly voice: VoiceClient;
   private readonly speaker: Speaker;
@@ -179,6 +184,10 @@ export class NexusApp {
     const { scene } = world;
     scene.add(this.main.mesh, this.captions.mesh, this.wrist.mesh, this.evidence.mesh, this.agents.mesh, this.guide.mesh, this.diorama.pivot);
     scene.add(this.main.connector.object, this.evidence.beam.object);
+    // Panels are often read at an angle (docked toward the model, the 3D viewer's raised camera): anisotropic
+    // filtering keeps their text crisp instead of smearing it along the slant.
+    const aniso = world.renderer.capabilities.getMaxAnisotropy();
+    for (const p of [this.main, this.captions, this.wrist, this.evidence, this.agents, this.guide]) p.setAnisotropy(aniso);
     this.guide.close();
     this.applyStage(DEFAULT_STAGE);
     this.placement = new PlacementController(world.renderer, scene, {
@@ -216,6 +225,8 @@ export class NexusApp {
     this.render();
     this.renderCaptions();
     this.renderWrist();
+    // A static judging build has no services to pair with: open straight into the offline demo.
+    if (STANDALONE) void this.startOffline();
   }
 
   /** Mouse and keyboard shortcuts press the same buttons a hand would, so nothing is desktop-only. */
@@ -265,6 +276,7 @@ export class NexusApp {
       pttActive: this.ptt !== undefined,
       micOpen: this.ptt?.micOpen ?? false,
       voiceConnected: this.voice.connected,
+      offline: this.api.offline,
       findings: Object.fromEntries([...this.findings].map(([k, f]) => [k, { id: f.id, status: f.status }])),
       captions: [...this.captionLog],
       lastCommand: this.lastCommand,
@@ -603,11 +615,13 @@ export class NexusApp {
 
   private async onKeypad(key: string): Promise<void> {
     if (key === "del") this.code = this.code.slice(0, -1);
+    else if (key === "offline") return this.startOffline();
     else if (key === "go") {
       const res = await this.api.pair(this.code, USER_ID);
       this.code = "";
       if (!res.ok) {
-        this.notice = res.error === "api unreachable" ? "Cannot reach the NEXUS service." : "That pairing code did not work.";
+        this.notice =
+          res.error === "api unreachable" ? "Cannot reach the NEXUS service. Poke Offline demo to explore the precomputed research." : "That pairing code did not work.";
         return this.render();
       }
       this.notice = undefined;
@@ -617,6 +631,27 @@ export class NexusApp {
       return this.go("welcome");
     } else if (/^\d$/.test(key) && this.code.length < 8) this.code += key;
     this.render();
+  }
+
+  /**
+   * Switches to the precomputed offline demo: no pairing, no network after the bundle loads, no voice gateway. Every
+   * finding still carries the SIE decision it got when the bundle was built (`pnpm demo:bundle`).
+   */
+  async startOffline(): Promise<void> {
+    if (this.api.offline && this.api.session) return;
+    const bundle = await loadDemoBundle();
+    if (!bundle.ok) {
+      this.notice = "The offline demo is not available in this build.";
+      return this.render();
+    }
+    const api = new DemoApi(bundle.value);
+    await api.pair("", USER_ID);
+    this.api = api;
+    this.code = "";
+    this.notice = undefined;
+    api.events((e) => void this.onEvent(e));
+    this.caption("narrator", "Offline demo: precomputed research from archival NASA data, checked by the integrity engine. Voice needs the NEXUS service.");
+    this.go("welcome");
   }
 
   private async onCard(action: string): Promise<void> {
@@ -885,6 +920,11 @@ export class NexusApp {
 
   private async startTalking(): Promise<void> {
     if (this.ptt || !this.api.session) return;
+    if (this.api.offline) {
+      // Speech recognition runs in services/voice-gateway (AGENTS.md rule 6), so offline the hands are the only way in.
+      this.caption("narrator", "Voice needs the NEXUS service. Everything here works by hand.");
+      return;
+    }
     const now = performance.now();
     this.ptt = { startedAt: now, lastSample: 0, samples: [], micOpen: false };
     this.voice.send({ type: "ptt.start", sampleRateHz: 16000 });
@@ -1060,9 +1100,10 @@ export class NexusApp {
     const finding = this.selected ? this.findings.get(this.selected) : undefined;
     switch (this.screen) {
       case "pair": {
-        lines.push({ text: "Pair this headset", tone: "title" }, { text: "Poke the pairing code shown by the NEXUS service.", tone: "muted" });
+        lines.push({ text: "Pair this headset", tone: "title" }, { text: "Poke the pairing code shown by the NEXUS service, or poke Offline demo to explore without one.", tone: "muted" });
         lines.push({ text: this.code ? this.code.replace(/./g, "● ") : "—", tone: "title" });
         const digits = ["1", "2", "3", "4", "5", "6", "7", "8", "9"];
+        rows.push([{ id: "pair:offline", label: "Offline demo", style: "chip" }]);
         rows.push([{ id: "pair:del", label: "⌫" }, { id: "pair:0", label: "0" }, { id: "pair:go", label: "Pair", style: "primary" }]);
         for (let r = 2; r >= 0; r--) rows.push(digits.slice(r * 3, r * 3 + 3).map((d) => ({ id: `pair:${d}`, label: d })));
         break;
@@ -1191,6 +1232,10 @@ export class NexusApp {
       }
     }
     if (this.notice) lines.splice(1, 0, { text: this.notice, tone: "warn" });
+    // AGENTS.md rule 7: precomputed research is never presented as a live run.
+    if (this.api.offline && (this.screen === "researching" || this.screen === "finding")) {
+      lines.splice(1, 0, { text: "Replayed precomputed research (offline demo). Archival NASA data, not live mission data.", tone: "muted", badge: "Offline", badgeTone: "offline" });
+    }
     return { lines, rows };
   }
 
