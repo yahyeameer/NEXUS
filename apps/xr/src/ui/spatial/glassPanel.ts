@@ -5,6 +5,7 @@ import { CanvasTexture, DoubleSide, Mesh, MeshBasicMaterial, PlaneGeometry, SRGB
 import type { Object3D } from "three";
 import type { Rect } from "../../input/poke.js";
 import { wrapText } from "../textLayout.js";
+import { HoloFrame } from "./holoFrame.js";
 import { BADGE, BUTTON, COLOR, FONT_FAMILY, MOTION, SPACE, TYPE } from "./tokens.js";
 import type { BadgeTone, ButtonTone, TextTone } from "./tokens.js";
 
@@ -79,6 +80,8 @@ type Glide = { from: Vector3; to: Vector3; face: Vector3; start: number };
 
 export class SpatialGlassPanel {
   readonly mesh: Mesh<PlaneGeometry, MeshBasicMaterial>;
+  /** Animated holographic edge: rim sweep, corner brackets, glow (holoFrame.ts). */
+  readonly frame: HoloFrame;
   buttons: PanelButton[] = [];
   private readonly canvas: HTMLCanvasElement;
   private readonly ctx: CanvasRenderingContext2D;
@@ -99,6 +102,8 @@ export class SpatialGlassPanel {
     readonly heightM: number,
     /** Display-only panels (no buttons) show their first page and never grow paging buttons. */
     private readonly paging = true,
+    /** Room kept free at the left of the text for a live element drawn over the panel (the voice orb). */
+    private readonly insetLeftM = 0,
   ) {
     this.visibleH = heightM;
     this.canvas = document.createElement("canvas");
@@ -114,6 +119,8 @@ export class SpatialGlassPanel {
     // UI is drawn over the terrain so a zoomed-in diorama never hides a button.
     this.mesh.renderOrder = 5;
     this.mesh.userData.panel = this;
+    this.frame = new HoloFrame(widthM, heightM, SPACE.radius);
+    this.mesh.add(this.frame.mesh);
   }
 
   get object(): Object3D {
@@ -215,9 +222,12 @@ export class SpatialGlassPanel {
     }
   }
 
+  /** Hologram unfold: the panel opens from a thin horizontal slit while its rim draws on. */
   private applyFade(k: number): void {
     this.mesh.material.opacity = k;
-    this.mesh.scale.setScalar(0.94 + 0.06 * k);
+    this.mesh.scale.set(0.96 + 0.04 * k, 0.18 + 0.82 * k, 1);
+    this.frame.setOpacity(k);
+    this.frame.setReveal(this.closing ? 1 : k);
   }
 
   set(content: PanelContent): void {
@@ -292,7 +302,8 @@ export class SpatialGlassPanel {
     // Paged panels and display-only panels with no text keep their full size.
     const pageText = (pages[this.page] ?? []).reduce((h, l) => h + lineHeight(l), 0);
     const needed = 2 * MARGIN + headH + pageText + (img ? imgH / s + 0.004 : 0) + rows.length * (BUTTON_H + GAP) + (rows.length ? GAP : 0);
-    this.fitTo(pages.length > 1 || textLines.length === 0 ? this.heightM : Math.min(this.heightM, Math.max(needed, 0.08)));
+    // A panel with a live element beside its text (the voice orb) keeps its full height, so the element stays centred.
+    this.fitTo(pages.length > 1 || textLines.length === 0 || this.insetLeftM > 0 ? this.heightM : Math.min(this.heightM, Math.max(needed, 0.08)));
     this.buttons = [];
     rows.forEach((row, r) => {
       const y = MARGIN + r * (BUTTON_H + GAP);
@@ -302,7 +313,7 @@ export class SpatialGlassPanel {
 
     const top = (this.heightM - this.visibleH) * s;
     this.drawGlass(top, this.visibleH * s);
-    const left = MARGIN * s;
+    const left = (MARGIN + this.insetLeftM) * s;
     const right = canvas.width - MARGIN * s;
     let y = top + MARGIN * s;
     ctx.textBaseline = "top";
@@ -433,6 +444,13 @@ export class SpatialGlassPanel {
       ctx.fillStyle = lit;
       roundRect(ctx, px, py, bw, bh, r);
       ctx.fill();
+      // Glass bevel: a bright hairline along the top edge.
+      const bevel = ctx.createLinearGradient(px, 0, px + bw, 0);
+      bevel.addColorStop(0, "rgba(255, 255, 255, 0)");
+      bevel.addColorStop(0.5, hot ? "rgba(255, 255, 255, 0.7)" : "rgba(255, 255, 255, 0.28)");
+      bevel.addColorStop(1, "rgba(255, 255, 255, 0)");
+      ctx.fillStyle = bevel;
+      ctx.fillRect(px + SPACE.buttonRadius * s, py + 0.0006 * s, bw - 2 * SPACE.buttonRadius * s, 0.0008 * s);
       ctx.lineWidth = (hot ? 0.0018 : 0.001) * s;
       ctx.strokeStyle = hot ? "#ffffff" : c.rim;
       const base = ctx.globalAlpha;
@@ -520,6 +538,7 @@ export class SpatialGlassPanel {
   private fitTo(h: number): void {
     if (Math.abs(h - this.visibleH) < 1e-4) return;
     this.visibleH = h;
+    this.frame.setHeight(h, this.heightM);
     const pos = this.mesh.geometry.getAttribute("position");
     const uv = this.mesh.geometry.getAttribute("uv");
     // PlaneGeometry(1×1 segments): vertices 0,1 on top, 2,3 on the bottom; canvas row 0 is uv v = 1.
@@ -538,7 +557,7 @@ export class SpatialGlassPanel {
     const { ctx } = this;
     const s = PX_PER_M;
     const out: LaidLine[] = [];
-    const width = (this.widthM - 2 * MARGIN) * s;
+    const width = (this.widthM - 2 * MARGIN - this.insetLeftM) * s;
     let header = this.content.lines[0]?.tone === "title";
     for (const l of this.content.lines) {
       if (l.tone === "label") {

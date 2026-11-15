@@ -15,6 +15,7 @@ import { EmulatedPlaneSurface, XrHitTestSurface } from "./ar/surfaceDetection.js
 import type { SurfaceSource } from "./ar/surfaceDetection.js";
 import { DEFAULT_STAGE } from "./ar/stage.js";
 import { SITES } from "./config.js";
+import { agentName } from "./ui/findingView.js";
 import type { Emulator } from "./emulator.js";
 import { loadSiteLocations, regionCentre } from "./planet/regions.js";
 import { DEFAULT_TABLE } from "./scene/tabletop.js";
@@ -71,6 +72,10 @@ async function boot(): Promise<void> {
     // The typed stand-in for speech goes to the voice gateway, which the offline demo does not have.
     const sim = document.querySelector<HTMLElement>(".sim-speech");
     if (sim) sim.style.display = s.offline ? "none" : "";
+    if (emulator) {
+      emulator.voiceBox.levelSource(() => app.micLevel);
+      emulator.voiceBox.state(s.voice.mode, s.voice.speaker ? agentName(s.voice.speaker) : undefined);
+    }
   };
   app.onChange(describe);
   describe();

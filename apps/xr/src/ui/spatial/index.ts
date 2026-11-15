@@ -11,3 +11,5 @@ export * from "./scanningBeam.js";
 export * from "./spatialConnector.js";
 export * from "./statusIndicator.js";
 export * from "./decisionControls.js";
+export * from "./holoFrame.js";
+export * from "./voicePanel.js";

@@ -21,6 +21,8 @@ export class PushToTalkMic {
   private stream?: MediaStream;
   private ctx?: AudioContext;
   private pending: number[] = [];
+  /** Loudness of the latest audio block, 0..1 (RMS, scaled), for the voice orb. Never stored or sent. */
+  level = 0;
 
   /** Opens the mic. Resolves false when there is no mic or permission was refused; the caller shows captions instead. */
   async start(onFrame: (pcm: Uint8Array) => void): Promise<boolean> {
@@ -33,6 +35,9 @@ export class PushToTalkMic {
       URL.revokeObjectURL(url);
       const node = new AudioWorkletNode(ctx, "nexus-tap");
       node.port.onmessage = (e: MessageEvent<Float32Array>) => {
+        let sum = 0;
+        for (const v of e.data) sum += v * v;
+        this.level = Math.min(1, Math.sqrt(sum / Math.max(1, e.data.length)) * 8);
         for (const v of resample(e.data, ctx.sampleRate, GATEWAY_SAMPLE_RATE_HZ)) this.pending.push(v);
         while (this.pending.length >= FRAME_SAMPLES) onFrame(toPcm16(Float32Array.from(this.pending.splice(0, FRAME_SAMPLES))));
       };
@@ -50,5 +55,6 @@ export class PushToTalkMic {
     this.stream = undefined;
     this.ctx = undefined;
     this.pending = [];
+    this.level = 0;
   }
 }
