@@ -1,0 +1,7 @@
+**/node_modules
+**/dist
+.git
+.env
+.env.*
+.nexus-run
+# data/terrain is kept here (excluded in the root .dockerignore): terrain_measurements reads it.

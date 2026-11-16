@@ -38,6 +38,7 @@ The Jev routing decision can drop any of these. Only the coordinator dispatches;
 | `wikipedia` | Wikipedia search and summaries (`docker:wikipedia-mcp`) | all 20 |
 | `papers` | Crossref, OpenAlex, Semantic Scholar, arXiv metadata search (`docker:paper-search`, no downloads) | all 20 |
 | `science_fetch` | GET-only page reader limited to NASA, USGS, LPI, ADS, arXiv and a few other science hosts | all 20 |
+| `browser` | Read-only headless Chromium (`browser_open`, `browser_screenshot`) for pages that need JavaScript, such as Moon Trek. Same host list as `science_fetch`, re-checked after redirects; no form posts, no downloads | all 20 |
 | `evidence_candidates` | `evidence_candidate_propose`: queue a web source for curation | the 7 literature-facing agents |
 
 Not given to any agent: shell, file writes, code execution, memory, calculator, paper downloads, DuckDuckGo `fetch_content` (it would bypass the fetch domain list). `runtime.safety: restricted` denies any tool call that is not allowed or read-only.
@@ -69,6 +70,23 @@ Every agent can search the web, but web pages are not in the evidence store, so 
 
 For the judged demo, run with `NEXUS_MODE=precomputed` so web tools are not on the critical path.
 
+## Models
+
+Every agent runs on Gemini through docker-agent's native `google` provider: `muse` is `gemini-3.8-flash` (reasoning) and `fast` is `gemini-3.5-flash-lite` (extraction). The key is `GEMINI_API_KEY` in the backend environment. `NEXUS_GEMINI_MODEL` overrides the model for every agent without editing the YAML.
+
+## Running the team live
+
+`services/orchestrator/src/team/teamCli.ts` is the `NEXUS_TEAM_CMD` (see `services/orchestrator/README.md`). It runs the agents that Jev chose, phase by phase in the coordinator's order, at most `NEXUS_TEAM_CONCURRENCY` (default 3) at a time. Each agent is one `docker agent run --exec --last --json --safety restricted --agent <name>` call. Every agent shares the run's team board, and each later phase receives the earlier outputs. The raw outputs go back to the orchestrator, then to the SIE in `services/api`, exactly as precomputed runs do.
+
+Try one agent by hand:
+
+```bash
+export GEMINI_API_KEY=...            # backend only
+docker agent run --exec --last --agent lola_elevation_researcher agents/nexus.yaml "Investigate ..."
+```
+
+`docker:` MCP refs need Docker Desktop's MCP Gateway. In a plain container (`infra/Dockerfile.agents`), add `--flavor container`, which starts the same three research servers with `uvx` instead.
+
 ## Output contract
 
 All agents except the coordinator and synthesis return `AgentOutput` (`packages/schemas/src/agentOutput.ts`), enforced by `structured_output` in `tool` mode: the runtime validates the JSON Schema, including `additionalProperties: false`, before the turn ends. The advisors (#38, #39, #43, #45, #46) return `claims: []` and put their findings in `openQuestions` (for people) and `notes` (JSON for the SIE), so the strict schema stays unchanged.
@@ -86,8 +104,9 @@ All agents except the coordinator and synthesis return `AgentOutput` (`packages/
 
 - `pnpm install` (the tool server runs with `tsx`), and evidence packs and terrain files in `data/` for the sites you run.
 - The orchestrator sets `NEXUS_RUN_DIR` to a fresh directory per run and writes `context.json` there.
-- Docker MCP Toolkit available for the `docker:` refs.
-- Backend env: `MUSE_BASE_URL`, `MUSE_API_KEY`, `MUSE_MODEL`, `FAST_BASE_URL`, `FAST_API_KEY`, `FAST_MODEL` (see `.env.example`).
+- Docker MCP Toolkit available for the `docker:` refs, or `--flavor container` with `uvx` installed.
+- Chromium for the `browser` toolset (Playwright's, or `NEXUS_CHROMIUM_PATH`).
+- Backend env: `GEMINI_API_KEY` (see `.env.example`).
 
 ## Running locally
 
