@@ -1,16 +1,24 @@
+import { resolve } from "node:path";
+import { claudeFromEnv } from "./adapters/claudeReasoningAdapter.js";
 import { FakeSpeechToText, SilentTextToSpeech } from "./adapters/speechAdapter.js";
 import { HttpApi } from "./apiClient.js";
 import { buildServer } from "./server.js";
 
 const port = Number(process.env.VOICE_GATEWAY_PORT ?? 4100);
 const host = process.env.HOST ?? "0.0.0.0";
+const repoRoot = resolve(import.meta.dirname, "../../..");
 
-// Real STT/TTS and reasoning adapters plug in here once providers are chosen (docs/TASKS.md Phase 1 bake-off).
+// Claude answers grounded questions and reads field notes when the backend has MUSE_API_KEY; without it the gateway
+// keeps its deterministic paths (descriptor extraction, "no evidence" phrase). Every script still passes the SIE.
+const reasoning = claudeFromEnv(process.env, repoRoot, (entry) => process.stdout.write(`${JSON.stringify({ msg: "voice.reasoning.call", ...entry })}\n`));
+
+// Real STT/TTS adapters plug in here once providers are chosen (docs/TASKS.md Phase 1 bake-off).
 // Until then the gateway runs with captions only, which the headset already handles (VOICE.md §11).
 const app = buildServer({
   api: new HttpApi(process.env.API_URL ?? "http://localhost:4000", process.env.VOICE_GATEWAY_TOKEN ?? ""),
   stt: new FakeSpeechToText(),
   tts: new SilentTextToSpeech(),
+  reasoning,
   // `pnpm dev:xr` sets this so the desktop emulator can type what it would say (docs/TESTING.md).
   simulatedSpeech: process.env.NEXUS_SIMULATED_STT === "1",
 });
