@@ -4,6 +4,9 @@ import { defineConfig } from "@playwright/test";
 // emulated hands, so every flow here is completed hands-only unless the test is about the voice shortcut.
 export default defineConfig({
   testDir: "e2e",
+  // ask.spec.ts needs the Cloudflare Pages Function (functions/api/ask.ts), which this stack does not serve; it runs
+  // with playwright.edge.config.ts against `wrangler pages dev` or a deployed preview.
+  testIgnore: ["ask.spec.ts"],
   // Software WebGL on CI runs the long hands-only flow at a few frames per second, so each flow gets generous time.
   timeout: 480_000,
   expect: { timeout: 30_000 },
