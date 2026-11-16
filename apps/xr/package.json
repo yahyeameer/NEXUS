@@ -9,7 +9,8 @@
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.json",
     "test:e2e": "playwright test",
-    "build:standalone": "vite build --mode standalone"
+    "build:standalone": "vite build --mode standalone",
+    "test:e2e:edge": "playwright test --config playwright.edge.config.ts"
   },
   "dependencies": {
     "@iwer/devui": "2.7.0",
@@ -21,6 +22,7 @@
     "zod": "^3.25.76"
   },
   "devDependencies": {
+    "@nexus/sie": "workspace:*",
     "@playwright/test": "^1.55.0",
     "@types/three": "0.184.0",
     "@vitejs/plugin-basic-ssl": "^2.1.0",

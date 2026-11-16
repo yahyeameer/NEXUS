@@ -55,8 +55,14 @@ describe("ScientificDecisionControls", () => {
     expect(ids(false)).not.toContain("card:hear");
   });
 
+  it("offers Ask only where the answer function is deployed", () => {
+    const ids = (askable: boolean) => decisionControls({ reviewable: false, speakable: false, askable }, false)[0]?.map((b) => b.id);
+    expect(ids(true)).toContain("card:ask");
+    expect(ids(false)).not.toContain("card:ask");
+  });
+
   it("never uses forbidden words", () => {
-    const labels = [...DECISIONS, ...decisionControls({ reviewable: true, speakable: true }, true).flat()].map((b) => b.label);
+    const labels = [...DECISIONS, ...decisionControls({ reviewable: true, speakable: true, askable: true }, true).flat()].map((b) => b.label);
     for (const l of labels) expect(l).not.toMatch(FORBIDDEN);
   });
 });

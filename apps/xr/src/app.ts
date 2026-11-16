@@ -26,6 +26,9 @@ import { HandInput } from "./input/hands.js";
 import { ApiClient } from "./net/api.js";
 import type { LogbookEntry, NexusApi } from "./net/api.js";
 import { DemoApi, loadDemoBundle } from "./net/demoApi.js";
+import { ASK_CHIPS, askAboutFinding, askAvailable } from "./net/askApi.js";
+import { systemPhrases } from "@nexus/voice/browser";
+import type { AskQuestionId } from "@nexus/schemas";
 import { STANDALONE } from "./config.js";
 import { VoiceClient } from "./net/voice.js";
 import { zoomedScale } from "./input/manipulate.js";
@@ -51,7 +54,7 @@ import {
 } from "./ui/spatial/index.js";
 import type { ButtonSpec, MarkerState, PanelContent, PanelLine, VoiceMode } from "./ui/spatial/index.js";
 
-type Screen = "pair" | "welcome" | "globe" | "idle" | "measure" | "mark" | "selected" | "researching" | "finding" | "reason" | "sources" | "evidence" | "compare" | "logbook" | "clarify";
+type Screen = "pair" | "welcome" | "globe" | "idle" | "measure" | "mark" | "selected" | "researching" | "finding" | "reason" | "sources" | "evidence" | "compare" | "logbook" | "clarify" | "ask";
 
 export interface AppOptions {
   emulated: boolean;
@@ -126,6 +129,7 @@ const EYEBROW: Record<Screen, string> = {
   compare: "Possible readings",
   logbook: "Your reviews",
   clarify: "Clarify",
+  ask: "Ask · Evidence only",
 };
 /** A pinch within this angle of the globe's region marker opens the region. */
 const GLOBE_PICK_DEG = 9;
@@ -191,6 +195,9 @@ export class NexusApp {
   private readonly ringState = new Map<string, RingState>();
   private progress: string[] = [];
   private logbookEntries: LogbookEntry[] = [];
+  /** Standalone build only: the Cloudflare function answers fixed questions about the selected finding. */
+  private askReady = false;
+  private askState?: { findingId: string; questionId: AskQuestionId; pending: boolean; text?: string; saved?: boolean };
   private clarify?: Extract<VoiceServerMessage, { type: "clarify" }>;
   private readonly captionLog: string[] = [];
   private ptt?: { startedAt: number; lastSample: number; samples: { tMs: number; rayFeatureId?: string; rayPoint?: { x: number; y: number; z: number }; onUi: boolean; headPosition: { x: number; y: number; z: number }; headDirection: { x: number; y: number; z: number } }[]; micOpen: boolean };
@@ -614,6 +621,8 @@ export class NexusApp {
         return void this.onCard(arg);
       case "reason":
         return void this.onReason(arg);
+      case "ask":
+        return void this.onAsk(arg);
       case "clarify":
         return this.onClarify(arg);
       case "site":
@@ -712,6 +721,10 @@ export class NexusApp {
     this.notice = undefined;
     api.events((e) => void this.onEvent(e));
     this.caption("narrator", "Offline demo: precomputed research from archival NASA data, checked by the integrity engine. Voice needs the NEXUS service.");
+    void askAvailable().then((ok) => {
+      this.askReady = ok;
+      if (this.screen === "finding") this.render();
+    });
     this.go("welcome");
   }
 
@@ -733,6 +746,9 @@ export class NexusApp {
         return this.go("evidence");
       case "compare":
         return this.go("compare");
+      case "ask":
+        if (this.askState?.findingId !== f.id) this.askState = undefined;
+        return this.go("ask");
       case "close":
         this.selected = undefined;
         this.repaintRings();
@@ -741,6 +757,28 @@ export class NexusApp {
   }
 
   private pendingDecision?: ReviewDecision;
+
+  /** Asks the edge function one fixed question; speaks only an SIE-approved answer, else the fixed phrase. */
+  private async onAsk(arg: string): Promise<void> {
+    const f = this.selected ? this.findings.get(this.selected) : undefined;
+    const chip = ASK_CHIPS.find((c) => c.id === arg);
+    if (!f || !chip || this.askState?.pending) return;
+    this.speaker.stop();
+    this.askState = { findingId: f.id, questionId: chip.id, pending: true };
+    this.render();
+    this.changed();
+    const res = await askAboutFinding(f.id, chip.id);
+    if (this.askState?.findingId !== f.id || this.askState.questionId !== chip.id) return;
+    if (res.ok && res.value.kind === "approved") {
+      this.askState = { findingId: f.id, questionId: chip.id, pending: false, text: res.value.script, saved: res.value.source === "saved" };
+      this.speaker.enqueue({ scriptId: res.value.sieDecisionId, text: res.value.script, speaker: "narrator", rate: res.value.speechRate });
+    } else {
+      this.askState = { findingId: f.id, questionId: chip.id, pending: false, text: res.ok ? systemPhrases.noEvidence : "The answer service did not respond. Everything else here works without it." };
+      if (res.ok) this.speaker.phrase("noEvidence");
+    }
+    if (this.screen === "ask") this.render();
+    this.changed();
+  }
 
   private async onReason(arg: string): Promise<void> {
     const f = this.selected ? this.findings.get(this.selected) : undefined;
@@ -1258,7 +1296,7 @@ export class NexusApp {
         break;
       case "finding": {
         if (!finding) return this.screenFallback();
-        const card = findingContent(finding, this.speaker.speaking);
+        const card = findingContent(finding, this.speaker.speaking, this.askReady);
         lines.push(...card.lines);
         rows.push(...card.rows);
         break;
@@ -1288,6 +1326,20 @@ export class NexusApp {
         lines.push(...(finding ? comparisonLines(finding) : []));
         rows.push([{ id: "back:finding", label: "Back" }, { id: "card:evidence", label: "Evidence", style: "chip" }]);
         break;
+      case "ask": {
+        const a = this.askState?.findingId === finding?.id ? this.askState : undefined;
+        lines.push({ text: "Ask about this finding", tone: "title" });
+        lines.push({ text: "Gemini answers from this finding's evidence only. The integrity engine checks every answer before it is shown or spoken.", tone: "muted" });
+        if (a?.pending) lines.push({ text: "Checking the evidence…", tone: "body" });
+        else if (a?.text) {
+          lines.push({ text: a.text, tone: "body" });
+          if (a.saved) lines.push({ text: "Saved answer: the live model was unavailable, so a stored answer was checked again and used.", tone: "muted" });
+        }
+        rows.push([{ id: "back:finding", label: "Back" }]);
+        rows.push(ASK_CHIPS.slice(2).map((c) => ({ id: `ask:${c.id}`, label: c.label, style: a?.questionId === c.id ? ("active" as const) : ("chip" as const) })));
+        rows.push(ASK_CHIPS.slice(0, 2).map((c) => ({ id: `ask:${c.id}`, label: c.label, style: a?.questionId === c.id ? ("active" as const) : ("chip" as const) })));
+        break;
+      }
       case "logbook":
         lines.push({ text: "Logbook", tone: "title" });
         if (this.logbookEntries.length === 0) lines.push({ text: "No reviews yet.", tone: "muted" });

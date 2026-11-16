@@ -1,0 +1,6 @@
+# Cloudflare Pages config for the standalone judging build (pnpm deploy:cloudflare*). The /api/ask function needs
+# nodejs_compat for node:crypto in the SIE audit records. Secrets (GEMINI_API_KEY) are set on the project, not here.
+name = "nexus"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-11-01"
+compatibility_flags = ["nodejs_compat"]

@@ -10,9 +10,9 @@ import type { PanelContent } from "./glassPanel.js";
 import { SpatialConnector } from "./spatialConnector.js";
 
 /** A finding card's lines and buttons. Pure apart from reading the finding. */
-export function findingContent(f: ScientificFinding, speaking: boolean): PanelContent {
+export function findingContent(f: ScientificFinding, speaking: boolean, askable = false): PanelContent {
   const card = cardModel(f);
-  return { lines: [...card.lines], rows: decisionControls(card, speaking) };
+  return { lines: [...card.lines], rows: decisionControls({ ...card, askable }, speaking) };
 }
 
 export class ScientificFindingPanel extends SpatialGlassPanel {

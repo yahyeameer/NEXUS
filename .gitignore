@@ -13,3 +13,4 @@ playwright-report/
 *.opus
 *.webm
 .nexus-run/
+.wrangler/

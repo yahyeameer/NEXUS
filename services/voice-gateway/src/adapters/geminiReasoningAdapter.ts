@@ -1,16 +1,18 @@
 // Google Gemini behind the ReasoningAdapter: voice agents #51, #53 and #54 as direct model calls (AGENTS.md §8).
 // Backend only, the key never reaches the headset (AGENTS.md rule 6). This is the only file that imports the SDK.
+// No Node built-ins here: the Cloudflare function (apps/xr/functions) runs this same class.
 //
 // What the model may do here: pick descriptors from the scientist's words, and write short spoken scripts from the
 // selected finding's evidence. What it may not do: invent evidence IDs or numbers. Unknown IDs are refused below,
 // and every script still goes through the SIE voice validator before anything is spoken (AGENTS.md rule 2).
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { ApiError, GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { z } from "zod";
 import type { Result } from "@nexus/schemas";
 import type { ValidationIssue } from "@nexus/sie";
 import type { FieldNoteInterpretation, GroundingContext, ReasoningAdapter, SpokenAnswer } from "./reasoningAdapter.js";
+import type { VoicePrompts } from "./voicePrompts.js";
+
+export type { VoicePrompts } from "./voicePrompts.js";
 
 /**
  * Both default to the fastest stable model at minimal thinking. Voice answers are short and grounded in a small
@@ -20,24 +22,6 @@ import type { FieldNoteInterpretation, GroundingContext, ReasoningAdapter, Spoke
 export const GEMINI_DEFAULT_MODEL = "gemini-3.5-flash-lite";
 export const GEMINI_DEFAULT_FAST_MODEL = "gemini-3.5-flash-lite";
 export const GEMINI_TIMEOUT_MS = 8000;
-
-/** Canonical instruction specs live in agents/prompts; they are read at start-up so code and spec cannot drift. */
-export interface VoicePrompts {
-  teamRules: string;
-  fieldNoteInterpreter: string;
-  dialogueGrounding: string;
-  briefingComposer: string;
-}
-
-export function loadVoicePrompts(repoRoot: string): VoicePrompts {
-  const read = (name: string) => readFileSync(join(repoRoot, "agents/prompts", `${name}.md`), "utf8");
-  return {
-    teamRules: read("_team_rules"),
-    fieldNoteInterpreter: read("field_note_interpreter"),
-    dialogueGrounding: read("dialogue_grounding_agent"),
-    briefingComposer: read("spoken_briefing_composer"),
-  };
-}
 
 // The JSON schema Gemini must answer in, and the zod schema its text is checked against. Kept to what the gateway
 // consumes; the gateway re-parses with its own schemas too.
@@ -237,17 +221,4 @@ function rewriteNote(issues: readonly ValidationIssue[]): string {
 
 function knownIds(c: GroundingContext): Set<string> {
   return new Set([...c.evidence.map((e) => e.id), ...c.measurements.map((m) => m.id)]);
-}
-
-/** Gemini is on only when the backend has a key; without one the gateway keeps its deterministic paths. */
-export function geminiFromEnv(env: Record<string, string | undefined>, repoRoot: string, log?: GeminiReasoningOptions["log"]): GeminiReasoning | undefined {
-  const apiKey = env.GEMINI_API_KEY;
-  if (!apiKey) return undefined;
-  return new GeminiReasoning({
-    prompts: loadVoicePrompts(repoRoot),
-    apiKey,
-    model: env.GEMINI_MODEL || undefined,
-    fastModel: env.GEMINI_FAST_MODEL || undefined,
-    log,
-  });
 }
