@@ -83,6 +83,23 @@ services:
     depends_on:
       - api
 
+  # Live research with the Docker Agent team on Gemini, in place of the precomputed orchestrator:
+  #   docker compose -f infra/docker-compose.yml --profile live up -d --scale orchestrator=0
+  orchestrator-live:
+    profiles: [live]
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile.agents
+    env_file:
+      - path: ../.env
+        required: false
+    environment:
+      API_URL: http://api:4000
+    ports:
+      - "4200:4200"
+    depends_on:
+      - api
+
 volumes:
   pgdata:
   objects:

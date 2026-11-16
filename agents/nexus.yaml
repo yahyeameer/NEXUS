@@ -17,30 +17,23 @@
 #   - The Scientific Integrity Engine is code (packages/sie). Agents 41–46 marked "code" in
 #     docs/AGENT_CATALOG.md are deterministic validators, not models.
 
-# Muse provider integration is still to be confirmed (PRD §7.5). Both models go through an
-# OpenAI-compatible gateway configured from the backend environment, so no key or model id
-# is committed here and the headset never sees them (AGENTS.md rule 6).
-providers:
-  muse_gateway:
-    provider: openai
-    api_type: openai_chatcompletions
-    base_url: ${env.MUSE_BASE_URL}
-    token_key: MUSE_API_KEY
-  fast_gateway:
-    provider: openai
-    api_type: openai_chatcompletions
-    base_url: ${env.FAST_BASE_URL}
-    token_key: FAST_API_KEY
-
+# Gemini through docker-agent's native `google` provider (docs.docker.com/ai/docker-agent/providers/google/).
+# The key is read from GEMINI_API_KEY in the backend environment only; the headset never sees it
+# (AGENTS.md rule 6). Model names stay the logical `muse` (reasoning) and `fast` (extraction) so the
+# agents below do not change if the provider does. Override at run time without editing this file:
+# NEXUS_GEMINI_MODEL (services/orchestrator/src/team/teamCli.ts passes it as --model).
 models:
   muse:
-    provider: muse_gateway
-    model: ${env.MUSE_MODEL}
+    provider: google
+    model: gemini-3.8-flash
+    token_key: GEMINI_API_KEY
     temperature: 0.2
+    thinking_budget: low
   fast:
-    # Small model for extraction-style tasks.
-    provider: fast_gateway
-    model: ${env.FAST_MODEL}
+    # Small model for extraction-style tasks. Flash-Lite answered fastest in the voice gateway's live test.
+    provider: google
+    model: gemini-3.5-flash-lite
+    token_key: GEMINI_API_KEY
     temperature: 0
 
 # Headless runs from services/orchestrator: anything not explicitly allowed below and not
@@ -63,6 +56,8 @@ permissions:
     - search_arxiv
     - get_crossref_paper_by_doi
     - fetch
+    - browser_open
+    - browser_screenshot
     - evidence_*
     - dataset_catalog
     - terrain_measurements
@@ -90,6 +85,11 @@ mcps:
   nexus:
     command: pnpm
     args: ["--silent", "--dir", "services/orchestrator", "exec", "tsx", "src/mcp/main.ts"]
+  # Read-only headless browser (services/orchestrator/src/mcp/browserMain.ts): renders JavaScript,
+  # opens only the science hosts in BROWSER_HOSTS, never posts forms.
+  browser:
+    command: pnpm
+    args: ["--silent", "--dir", "services/orchestrator", "exec", "tsx", "src/mcp/browserMain.ts"]
 
 # Shared toolsets. Every agent gets the research kit; only the agents that need it get
 # evidence_candidates (the one write tool, which writes to a quarantined review queue).
@@ -126,6 +126,13 @@ toolsets:
       - wikipedia.org
       - esa.int
       - jaxa.jp
+
+  browser:
+    # Headless Chromium for pages `fetch` cannot read (JavaScript viewers such as LROC and Moon Trek).
+    # Same host list as science_fetch, re-checked after redirects. Results are leads, not evidence.
+    type: mcp
+    ref: browser
+    tools: [browser_open, browser_screenshot]
 
   # --- NEXUS data and files (read-only) -----------------------------------------------
   nexus_data:
@@ -208,7 +215,7 @@ agents:
       # Phase 7 — next steps
       - followup_investigation_planner
       - human_review_escalation_agent
-    use_toolsets: &research_kit [private_think, team_todo, team_board, web_search, wikipedia, papers, science_fetch, nexus_data]
+    use_toolsets: &research_kit [private_think, team_todo, team_board, web_search, wikipedia, papers, science_fetch, browser, nexus_data]
 
   # ======================= Phase 1 — observation and measurement =======================
 
@@ -296,7 +303,7 @@ agents:
     description: Proposes geological interpretations grounded in the site's curated literature excerpts.
     instruction_file: [prompts/_team_rules.md, prompts/lunar_geology_researcher.md]
     max_iterations: 15
-    use_toolsets: &research_kit_plus [private_think, team_todo, team_board, web_search, wikipedia, papers, science_fetch, nexus_data, evidence_candidates]
+    use_toolsets: &research_kit_plus [private_think, team_todo, team_board, web_search, wikipedia, papers, science_fetch, browser, nexus_data, evidence_candidates]
     structured_output: { mode: tool, name: agent_output, schema: *agent_output }
 
   impact_crater_researcher:
@@ -441,3 +448,23 @@ agents:
     max_iterations: 8
     use_toolsets: *research_kit
     structured_output: { mode: tool, name: agent_output, schema: *agent_output }
+
+# Run-time patches (`docker agent run --flavor <name>`; teamCli.ts reads NEXUS_AGENT_FLAVORS).
+flavors:
+  # For a container without Docker Desktop's MCP Gateway (infra/Dockerfile.agents): the same three
+  # read-only research servers, started as local stdio processes with uvx instead of `docker:` refs.
+  # Tool whitelists above are unchanged, so no agent gains a tool.
+  container:
+    toolsets:
+      web_search:
+        ref: null
+        command: uvx
+        args: ["duckduckgo-mcp-server"]
+      wikipedia:
+        ref: null
+        command: uvx
+        args: ["wikipedia-mcp"]
+      papers:
+        ref: null
+        command: uvx
+        args: ["paper-search-mcp"]

@@ -6,7 +6,7 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 ## Phase 1 — Foundation (Oct 30 – Nov 2)
 
 - [x] Monorepo scaffold (pnpm, TS strict, lint, vitest), `infra/docker-compose.yml`
-- [ ] Confirm Docker Agent install + run a hello team from `agents/nexus.yaml`
+- [ ] Confirm Docker Agent install + run a hello team from `agents/nexus.yaml` _(docker-agent v1.161 installs and parses the config, with and without the `container` flavor; a model run needs GEMINI_API_KEY)_
 - [ ] Confirm Muse access + `ReasoningAdapter`; confirm Jev access + `DecisionAdapter` (fallback policy if not available)
 - [ ] STT/TTS provider bake-off on Quest: latency, word timestamps, languages → pick
 - [ ] Test `speechSynthesis` and `getUserMedia` behaviour in Quest Browser
@@ -29,7 +29,7 @@ Cut order if behind: Debate mode → extra languages → live mode polish → da
 - [x] Evidence packs for 3 sites (verified URLs, credits)
 - [x] `packages/terrain` measurements + tests
 - [ ] MCP tools: `evidence_lookup`, `terrain_measurements`
-- [ ] Coordinator + 5 specialists running in Docker Agent; parallel where independent
+- [ ] Coordinator + 5 specialists running in Docker Agent; parallel where independent _(team runner, Gemini models, read-only browser and container image done (`services/orchestrator/src/team`, `infra/Dockerfile.agents`); not yet run against Gemini with a real key)_
 - [x] Orchestrator: timeouts, retries, `AgentOutput` parsing
 - [ ] Voice agents 51, 53, 54 inside voice-gateway (adapter seams, parsing, rewrite loop done; model client waits on Muse access)
 

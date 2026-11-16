@@ -1,0 +1,38 @@
+# Orchestrator image for live research with the Docker Agent team (agents/nexus.yaml).
+# Same as Dockerfile.service plus what the team needs at run time:
+#   - docker-agent, the standalone binary (no Docker daemon or Docker Desktop inside the container)
+#   - uv, to start the three read-only research MCP servers (`container` flavor in nexus.yaml)
+#   - Chromium, for the read-only research browser (services/orchestrator/src/mcp/browserMain.ts)
+# Build from the repo root:
+#   docker build -f infra/Dockerfile.agents -t nexus-agents .
+# Run (the key stays in the backend environment, AGENTS.md rule 6):
+#   docker run --env-file .env -e API_URL=http://host.docker.internal:4000 -p 4200:4200 nexus-agents
+FROM node:22-slim
+
+ARG DOCKER_AGENT_VERSION=v1.161.0
+ARG TARGETARCH=amd64
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends ca-certificates curl chromium fonts-liberation git git-lfs \
+ && rm -rf /var/lib/apt/lists/*
+RUN curl -fsSL "https://github.com/docker/docker-agent/releases/download/${DOCKER_AGENT_VERSION}/docker-agent-linux-${TARGETARCH}" -o /usr/local/bin/docker-agent \
+ && chmod +x /usr/local/bin/docker-agent
+COPY --from=ghcr.io/astral-sh/uv:0.9 /uv /uvx /usr/local/bin/
+
+RUN corepack enable
+WORKDIR /repo
+COPY . .
+RUN pnpm install --frozen-lockfile
+
+ENV NEXUS_MODE=live \
+    NEXUS_TEAM_CMD="pnpm --silent --dir services/orchestrator team" \
+    NEXUS_DOCKER_AGENT=docker-agent \
+    NEXUS_AGENT_FLAVORS=container \
+    NEXUS_CHROMIUM_PATH=/usr/bin/chromium \
+    TELEMETRY_ENABLED=false \
+    DOCKER_AGENT_AUTO_UPDATE=0
+# Warm the uvx cache so the first research run does not wait on package downloads.
+RUN for p in duckduckgo-mcp-server wikipedia-mcp paper-search-mcp; do timeout 120 uvx "$p" --help </dev/null >/dev/null 2>&1 || true; done
+
+WORKDIR /repo/services/orchestrator
+EXPOSE 4200
+CMD ["pnpm", "start"]

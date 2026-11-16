@@ -24,7 +24,9 @@ function runner(): TeamRunner {
 }
 
 const api = new HttpApi(apiUrl, token);
-const dispatcher = new Dispatcher({ api, runner: runner(), decisions: jevFromEnv(process.env) });
+// A live multi-phase team can need more than the 3 min default; the override is backend config only.
+const timeoutMs = Number(process.env.NEXUS_TEAM_TIMEOUT_MS) || undefined;
+const dispatcher = new Dispatcher({ api, runner: runner(), decisions: jevFromEnv(process.env), timeoutMs });
 const app = buildServer(dispatcher);
 listen(`${apiUrl.replace(/^http/, "ws")}/events`, token, (e) => dispatcher.onEvent(e), (m) => app.log.warn(m));
 app.listen({ port, host }).catch((err: unknown) => {

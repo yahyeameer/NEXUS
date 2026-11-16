@@ -11,7 +11,9 @@
     "dev": "tsx watch src/index.ts",
     "start": "tsx src/index.ts",
     "mcp": "tsx src/mcp/main.ts",
-    "demo:bundle": "tsx src/demoBundleCli.ts"
+    "demo:bundle": "tsx src/demoBundleCli.ts",
+    "team": "tsx src/team/teamCli.ts",
+    "mcp:browser": "tsx src/mcp/browserMain.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "~1.31.0",
@@ -19,6 +21,7 @@
     "@nexus/sie": "workspace:*",
     "@nexus/terrain": "workspace:*",
     "fastify": "^5.6.0",
+    "playwright-core": "~1.63.0",
     "ws": "^8.22.0",
     "zod": "^3.25.0"
   },
