@@ -1,0 +1,173 @@
+{
+  "kind": "nexus-saved-answers",
+  "note": "Answers to the fixed questions (4) written by gemini-3.5-flash-lite from each demo finding's evidence and approved by the SIE voice validator. Served only when the live model is unavailable, and re-checked by the SIE then.",
+  "answers": [
+    {
+      "findingId": "FND-DEMO-HADLEY_RILLE",
+      "questionId": "summary",
+      "script": "The LROC terrain model gives about 308 m of depth. The LROC terrain model gives about 1610 m between the two rim crests. Overall uncertainty is low.",
+      "sentenceEvidence": [
+        [
+          "EV-HADLEY_RILLE-001",
+          "MEAS-HADLEY_RILLE-HADLEY_RILLE-DEPTH"
+        ],
+        [
+          "EV-HADLEY_RILLE-001",
+          "MEAS-HADLEY_RILLE-HADLEY_RILLE-WIDTH"
+        ],
+        []
+      ],
+      "model": "gemini-3.5-flash-lite"
+    },
+    {
+      "findingId": "FND-DEMO-HADLEY_RILLE",
+      "questionId": "measurements",
+      "script": "The LROC terrain model gives about 308 m depth along this reach. The LROC terrain model gives about 1610 m between the two rim crests. Overall uncertainty is low.",
+      "sentenceEvidence": [
+        [
+          "EV-HADLEY_RILLE-001",
+          "MEAS-HADLEY_RILLE-HADLEY_RILLE-DEPTH"
+        ],
+        [
+          "EV-HADLEY_RILLE-001",
+          "MEAS-HADLEY_RILLE-HADLEY_RILLE-WIDTH"
+        ],
+        []
+      ],
+      "model": "gemini-3.5-flash-lite"
+    },
+    {
+      "findingId": "FND-DEMO-HADLEY_RILLE",
+      "questionId": "image",
+      "script": "The image shows a curving channel crossing the cratered mare plain, with one wall brightly lit and the other in shade. Overall uncertainty is low.",
+      "sentenceEvidence": [
+        [
+          "EV-HADLEY_RILLE-002"
+        ],
+        []
+      ],
+      "model": "gemini-3.5-flash-lite"
+    },
+    {
+      "findingId": "FND-DEMO-HADLEY_RILLE",
+      "questionId": "certainty",
+      "script": "Overall uncertainty is low.",
+      "sentenceEvidence": [
+        []
+      ],
+      "model": "gemini-3.5-flash-lite"
+    },
+    {
+      "findingId": "FND-DEMO-ELBOW_CRATER",
+      "questionId": "summary",
+      "script": "Overall uncertainty is medium. The LROC terrain model gives about 34 m depth. The LROC terrain model gives about 373 m diameter. The image shows a rounded, subdued depression at the labelled position, beside the shadowed rille wall. This is consistent with a degraded crater.",
+      "sentenceEvidence": [
+        [],
+        [
+          "EV-ELBOW_CRATER-001",
+          "MEAS-ELBOW_CRATER-ELBOW_CRATER-DEPTH"
+        ],
+        [
+          "EV-ELBOW_CRATER-001",
+          "MEAS-ELBOW_CRATER-ELBOW_CRATER-DIAMETER"
+        ],
+        [
+          "EV-ELBOW_CRATER-002"
+        ],
+        [
+          "MEAS-ELBOW_CRATER-ELBOW_CRATER-DEPTH",
+          "MEAS-ELBOW_CRATER-ELBOW_CRATER-DIAMETER"
+        ]
+      ],
+      "model": "gemini-3.5-flash-lite"
+    },
+    {
+      "findingId": "FND-DEMO-ELBOW_CRATER",
+      "questionId": "measurements",
+      "script": "The LROC terrain model gives about 34 m depth. The LROC terrain model gives about 373 m diameter. Overall uncertainty is medium.",
+      "sentenceEvidence": [
+        [
+          "EV-ELBOW_CRATER-001",
+          "MEAS-ELBOW_CRATER-ELBOW_CRATER-DEPTH"
+        ],
+        [
+          "EV-ELBOW_CRATER-001",
+          "MEAS-ELBOW_CRATER-ELBOW_CRATER-DIAMETER"
+        ],
+        []
+      ],
+      "model": "gemini-3.5-flash-lite"
+    },
+    {
+      "findingId": "FND-DEMO-ELBOW_CRATER",
+      "questionId": "image",
+      "script": "The image shows a rounded, subdued depression at the labelled position, beside the shadowed rille wall. Overall uncertainty is medium.",
+      "sentenceEvidence": [
+        [
+          "EV-ELBOW_CRATER-002"
+        ],
+        []
+      ],
+      "model": "gemini-3.5-flash-lite"
+    },
+    {
+      "findingId": "FND-DEMO-ELBOW_CRATER",
+      "questionId": "certainty",
+      "script": "Overall uncertainty is medium.",
+      "sentenceEvidence": [
+        []
+      ],
+      "model": "gemini-3.5-flash-lite"
+    },
+    {
+      "findingId": "FND-DEMO-HADLEY_DELTA_SLOPE",
+      "questionId": "summary",
+      "script": "the LROC terrain model gives about 18.6 deg across the labelled area. The image shows a textured slope surface dotted with small craters. Overall uncertainty is medium.",
+      "sentenceEvidence": [
+        [
+          "EV-HADLEY_DELTA-001",
+          "MEAS-HADLEY_DELTA-HADLEY_DELTA_SLOPE-SLOPE"
+        ],
+        [
+          "EV-HADLEY_DELTA-002"
+        ],
+        []
+      ],
+      "model": "gemini-3.5-flash-lite"
+    },
+    {
+      "findingId": "FND-DEMO-HADLEY_DELTA_SLOPE",
+      "questionId": "measurements",
+      "script": "The LROC terrain model gives about 18.6 deg mean slope across the labelled area. Overall uncertainty is medium.",
+      "sentenceEvidence": [
+        [
+          "EV-HADLEY_DELTA-001",
+          "MEAS-HADLEY_DELTA-HADLEY_DELTA_SLOPE-SLOPE"
+        ],
+        []
+      ],
+      "model": "gemini-3.5-flash-lite"
+    },
+    {
+      "findingId": "FND-DEMO-HADLEY_DELTA_SLOPE",
+      "questionId": "image",
+      "script": "The image shows a textured slope surface dotted with small craters. Overall uncertainty is medium.",
+      "sentenceEvidence": [
+        [
+          "EV-HADLEY_DELTA-002"
+        ],
+        []
+      ],
+      "model": "gemini-3.5-flash-lite"
+    },
+    {
+      "findingId": "FND-DEMO-HADLEY_DELTA_SLOPE",
+      "questionId": "certainty",
+      "script": "Overall uncertainty is medium.",
+      "sentenceEvidence": [
+        []
+      ],
+      "model": "gemini-3.5-flash-lite"
+    }
+  ]
+}

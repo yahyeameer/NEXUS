@@ -28,6 +28,16 @@ pnpm dev
 
 Open the printed HTTPS URL in **Meta Quest Browser** (same network), or use the IWER emulator in a desktop browser with `pnpm dev:xr`, which needs no headset and no database (see `apps/xr/README.md`).
 
+### Hosted build (Cloudflare Pages)
+
+The standalone build runs on Cloudflare Pages with one Pages Function, `apps/xr/functions/api/ask.ts`. It answers four fixed questions about the selected finding (the **Ask** chip on the finding card). Gemini writes the answer on the server, and the SIE voice validator approves it before it is spoken. When Gemini is down or rate limited, the function serves a saved answer from `data/demo/answers.json`, and the SIE checks that again too. The key is a Cloudflare secret (`GEMINI_API_KEY`) and never reaches the headset. Without it, the function serves only saved answers.
+
+```bash
+pnpm deploy:cloudflare:preview   # preview branch; pnpm deploy:cloudflare for production
+pnpm demo:answers                # regenerate saved answers (needs GEMINI_API_KEY)
+pnpm gen:prompts                 # after editing agents/prompts
+```
+
 ## Repository
 
 | Path | What it is |

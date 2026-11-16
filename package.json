@@ -18,7 +18,10 @@
     "dev:xr:client": "pnpm --filter @nexus/xr dev",
     "demo:bundle": "pnpm --filter @nexus/orchestrator demo:bundle",
     "build:xr:standalone": "pnpm demo:bundle && pnpm --filter @nexus/xr build:standalone",
-    "deploy:cloudflare": "pnpm build:xr:standalone && npx wrangler@4 pages deploy apps/xr/dist --project-name nexus"
+    "deploy:cloudflare": "pnpm build:xr:standalone && cd apps/xr && npx wrangler@4 pages deploy dist --project-name nexus",
+    "demo:answers": "pnpm --filter @nexus/voice-gateway exec tsx src/savedAnswersCli.ts",
+    "gen:prompts": "node scripts/genPrompts.mjs",
+    "deploy:cloudflare:preview": "pnpm build:xr:standalone && cd apps/xr && npx wrangler@4 pages deploy dist --project-name nexus --branch gemini-preview"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.0",

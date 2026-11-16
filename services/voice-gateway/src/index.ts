@@ -1,5 +1,5 @@
 import { resolve } from "node:path";
-import { geminiFromEnv } from "./adapters/geminiReasoningAdapter.js";
+import { geminiFromEnv } from "./adapters/voicePrompts.js";
 import { FakeSpeechToText, SilentTextToSpeech } from "./adapters/speechAdapter.js";
 import { HttpApi } from "./apiClient.js";
 import { buildServer } from "./server.js";

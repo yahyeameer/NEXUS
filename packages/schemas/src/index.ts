@@ -11,3 +11,4 @@ export * from "./sie.js";
 export * from "./agentTools.js";
 export * from "./voiceProtocol.js";
 export * from "./demo.js";
+export * from "./ask.js";

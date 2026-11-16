@@ -2,7 +2,8 @@ import { describe, expect, it } from "vitest";
 import { ApiError } from "@google/genai";
 import type { ScientificFinding } from "@nexus/schemas";
 import { evidence, measurements } from "../../../../packages/sie/fixtures/testSite.js";
-import { GeminiReasoning, geminiFromEnv, loadVoicePrompts } from "./geminiReasoningAdapter.js";
+import { GeminiReasoning } from "./geminiReasoningAdapter.js";
+import { geminiFromEnv, loadVoicePrompts } from "./voicePrompts.js";
 import type { GeminiModels } from "./geminiReasoningAdapter.js";
 import type { GroundingContext } from "./reasoningAdapter.js";
 
