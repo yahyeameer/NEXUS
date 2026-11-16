@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@fastify/websocket": "^11.3.4",
+    "@google/genai": "^3.3.0",
     "@nexus/schemas": "workspace:*",
     "@nexus/sie": "workspace:*",
     "@nexus/voice": "workspace:*",

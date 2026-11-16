@@ -49,6 +49,15 @@ These are workflow decisions, not statements of scientific truth.
 
 Jev receives only validated inputs. If Jev is unavailable, use the deterministic fallback policy in `packages/sie/fallbackPolicy.ts` and log `decision.source = "fallback"`.
 
+**Implementation (`packages/sie/src/jevAdapter.ts`, backend only).** Jev is TypeSafe's System One model: it answers typed yes/no questions with a probability and writes no text or numbers. It is enabled when the backend has `JEV_API_KEY`; the XR client never holds the key and never bundles the adapter.
+
+- **Thresholds.** A probability ≥ 0.65 is yes, ≤ 0.35 is no. Anything between is undecided and the fallback policy decides. The model version is pinned (`JEV_MODEL`), because answers can shift between Jev releases.
+- **Jev sees the evidence.** For sufficiency it receives the claims that survived the validators, each beside code-built labels for the evidence and measurements it cites, and is asked whether the evidence supports each claim at its stated confidence.
+- **Jev can only tighten the gate.** It may hold back or escalate a finding the policy would accept. A "sufficient" the policy would refuse, or a "no escalation" where the policy escalates, is outside policy and the fallback stands.
+- **Routing.** Measurement, imagery, uncertainty and synthesis agents always run; Jev picks the optional specialists.
+- **Reference clarification** compares two scores, which is arithmetic, so it always uses the deterministic policy.
+- **Audit.** Each call logs the Jev request id, model version and probabilities; request ids go into `sie_decisions`.
+
 ## 5. Decision input
 
 ```ts
