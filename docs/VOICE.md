@@ -110,6 +110,8 @@ Additional rules:
 - Live captions for both directions; scientist lines and NEXUS lines in different colours, prefixed by speaker.
 - Read-aloud on every card. Whisper mode = text only. Per-group volume and rate sliders.
 
+**Reasoning provider (`services/voice-gateway/src/adapters/geminiReasoningAdapter.ts`).** Field notes (#51), grounded Q&A (#53) and briefing rewrites (#54) run on Google Gemini with JSON-schema output when the backend has `GEMINI_API_KEY`; the key never reaches the headset. The model sees only the selected finding, its evidence and measurement records, and the field notes. An answer citing any other ID is refused before the SIE sees it, an answer marked `noEvidence` is replaced by the fixed system phrase, and every other script still passes the voice validator. Without a key, field notes use deterministic extraction and questions get the "no evidence" phrase.
+
 ## 10. System phrases (no SIE needed)
 
 Fixed strings in `packages/voice/src/systemPhrases.ts`, e.g. welcome, "Listening", "I didn't catch that", "Paused", errors. They must contain no scientific claims. Any change requires review.
