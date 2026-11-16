@@ -4,6 +4,7 @@ import { Dispatcher, listen } from "./dispatcher.js";
 import { buildServer } from "./server.js";
 import type { TeamRunner } from "./teamRunner.js";
 import { CommandRunner, PrecomputedRunner } from "./teamRunner.js";
+import { jevFromEnv } from "@nexus/sie/jevAdapter";
 
 const port = Number(process.env.ORCHESTRATOR_PORT ?? 4200);
 const host = process.env.HOST ?? "0.0.0.0";
@@ -23,7 +24,7 @@ function runner(): TeamRunner {
 }
 
 const api = new HttpApi(apiUrl, token);
-const dispatcher = new Dispatcher({ api, runner: runner() });
+const dispatcher = new Dispatcher({ api, runner: runner(), decisions: jevFromEnv(process.env) });
 const app = buildServer(dispatcher);
 listen(`${apiUrl.replace(/^http/, "ws")}/events`, token, (e) => dispatcher.onEvent(e), (m) => app.log.warn(m));
 app.listen({ port, host }).catch((err: unknown) => {

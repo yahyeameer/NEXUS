@@ -12,7 +12,7 @@ import type {
 import { auditRecord } from "./audit.js";
 import type { SieContext } from "./context.js";
 import { recordsFor } from "./context.js";
-import type { DecisionAdapter } from "./decisionAdapter.js";
+import type { DecisionAdapter, DecisionClaim, SufficiencyQuestion } from "./decisionAdapter.js";
 import { decide } from "./decisionAdapter.js";
 import { evidenceSufficientFallback, needsEscalationFallback } from "./fallbackPolicy.js";
 import { unmatchedNumbers, wordingIssue } from "./text.js";
@@ -151,24 +151,30 @@ export async function evaluateFinding(
   const v7 = validateSufficiency(kept);
   issues.push(...errorsOf(v7));
 
+  const sufficiencyQ: SufficiencyQuestion = {
+    validatorIssues: issues,
+    survivingClaims: kept.length,
+    groundedObservationOrMeasurement: kept.some((c) => c.claimType === "observation" || c.claimType === "measurement"),
+  };
+  // Jev also reads the surviving claims beside their evidence. It may only tighten the gate: a "sufficient" that
+  // the deterministic policy would refuse is outside policy, so the fallback stands.
   const sufficient = await decide(
-    adapter && (() => adapter.evidenceSufficient(sufficiencyQ())),
-    () => evidenceSufficientFallback(sufficiencyQ()),
+    adapter && (() => adapter.evidenceSufficient({ ...sufficiencyQ, claims: kept.map((c) => decisionClaim(c, ctx)) })),
+    () => evidenceSufficientFallback(sufficiencyQ),
+    (v) => !v || evidenceSufficientFallback(sufficiencyQ),
   );
-  function sufficiencyQ() {
-    return {
-      validatorIssues: issues,
-      survivingClaims: kept.length,
-      groundedObservationOrMeasurement: kept.some((c) => c.claimType === "observation" || c.claimType === "measurement"),
-    };
-  }
   const escalationQ = {
     contradiction: contested,
     contradictionPresented: v6.ok,
     uncertainty: draft.uncertainty.level,
     impact: input.impact ?? "normal",
   };
-  const escalate = await decide(adapter && (() => adapter.needsEscalation(escalationQ)), () => needsEscalationFallback(escalationQ));
+  // Same one-way rule: Jev may escalate more than the policy does, never less.
+  const escalate = await decide(
+    adapter && (() => adapter.needsEscalation(escalationQ)),
+    () => needsEscalationFallback(escalationQ),
+    (v) => v || !needsEscalationFallback(escalationQ),
+  );
 
   // V7 is deterministic: Jev may not overrule a failed sufficiency check upward.
   let outcome: FindingDecisionOutcome;
@@ -181,7 +187,7 @@ export async function evaluateFinding(
     reason = "evidence is not sufficient for review";
   } else if (escalate.value) {
     outcome = "ESCALATE_TO_SCIENTIST";
-    reason = contested ? "contradicting evidence needs the scientist's judgement" : "high-impact finding";
+    reason = contested ? "contradicting evidence needs the scientist's judgement" : input.impact === "high" ? "high-impact finding" : "flagged for the scientist's judgement";
   } else {
     outcome = "ACCEPT_FOR_REVIEW";
     reason = "validated claims with sufficient evidence";
@@ -211,6 +217,18 @@ export async function evaluateFinding(
       now,
     }),
   };
+}
+
+/** What Jev sees for one claim: its text and code-built labels for the evidence it cites. */
+function decisionClaim(claim: Claim, ctx: SieContext): DecisionClaim {
+  const evidence: string[] = [];
+  for (const id of new Set([...claim.evidenceIds, ...(claim.measurementIds ?? [])])) {
+    const ev = ctx.evidence.get(id);
+    if (ev) evidence.push(`${ev.type}: ${ev.title}${ev.excerpt ? ` — ${ev.excerpt}` : ""}`);
+    const m = ctx.measurements.get(id);
+    if (m) evidence.push(`measurement: ${m.quantity} ${m.value} ${m.unit} (${m.method})`);
+  }
+  return { text: claim.text, claimType: claim.claimType, evidence };
 }
 
 function errorsOf(r: ValidationResult): ValidationIssue[] {

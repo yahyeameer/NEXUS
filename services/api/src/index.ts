@@ -5,6 +5,7 @@ import { loadEvidenceStore } from "./evidenceStore.js";
 import { PgStore } from "./pgStore.js";
 import { buildServer } from "./server.js";
 import { MemoryStore } from "./store.js";
+import { jevFromEnv } from "@nexus/sie/jevAdapter";
 
 const port = Number(process.env.API_PORT ?? 4000);
 const host = process.env.HOST ?? "0.0.0.0";
@@ -12,7 +13,10 @@ const dataDir = process.env.NEXUS_DATA_DIR ?? resolve(import.meta.dirname, "../.
 
 // Without DATABASE_URL the API runs in memory so the precomputed demo works with no database (AGENTS.md §6).
 const store = process.env.DATABASE_URL ? await PgStore.connect(process.env.DATABASE_URL) : new MemoryStore();
+// Jev decisions only when the backend has JEV_API_KEY; otherwise the deterministic fallback (SCIENTIFIC_INTEGRITY.md §4).
+const decisions = jevFromEnv(process.env, (entry) => process.stdout.write(`${JSON.stringify({ msg: "sie.decision.jev", ...entry })}\n`));
 const app = buildServer({
+  decisions,
   store,
   evidence: await loadEvidenceStore(dataDir),
   auth: new Auth({

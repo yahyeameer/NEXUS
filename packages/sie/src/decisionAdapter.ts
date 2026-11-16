@@ -1,5 +1,5 @@
-// Jev structured decision questions (SCIENTIFIC_INTEGRITY.md §4). The vendor client lives in a backend
-// `jevAdapter.ts` that implements this interface; this package never imports a provider SDK (AGENTS.md §4).
+// Jev structured decision questions (SCIENTIFIC_INTEGRITY.md §4). The vendor client is `jevAdapter.ts`, which
+// implements this interface and is imported only by backend services (`@nexus/sie/jevAdapter`), never via the index.
 import type { Result, Uncertainty } from "@nexus/schemas";
 import type { ValidationIssue } from "./types.js";
 
@@ -11,10 +11,19 @@ export interface SpecialistQuestion {
   allowed: readonly string[];
 }
 
+/** A claim that survived the validators, with what its cited evidence says, so Jev can judge support. */
+export interface DecisionClaim {
+  text: string;
+  claimType: string;
+  /** Labels built by code from the evidence store and measurement records, never from model output. */
+  evidence: readonly string[];
+}
+
 export interface SufficiencyQuestion {
   validatorIssues: readonly ValidationIssue[];
   survivingClaims: number;
   groundedObservationOrMeasurement: boolean;
+  claims?: readonly DecisionClaim[];
 }
 
 export interface EscalationQuestion {
